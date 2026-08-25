@@ -136,6 +136,16 @@ module InMemory
     def delete(user_id) = rows.delete(user_id)
   end
 
+  class PendingImportRepository < Base
+    def find(user_id) = rows[user_id]
+
+    def save(user_id, payload)
+      rows[user_id] = payload
+    end
+
+    def delete(user_id) = rows.delete(user_id)
+  end
+
   class InstallmentPlanRepository < Base
     def for_user(user_id) = rows.values.select { |plan| plan.user_id == user_id }.sort_by(&:id)
 
@@ -169,7 +179,7 @@ module InMemory
   # same router, no database.
   class Factory
     attr_reader :users, :categories, :expenses, :fixed_costs, :subscriptions, :goals, :drafts,
-                :installment_plans, :clock
+                :installment_plans, :pending_imports, :clock
     attr_accessor :parser
 
     def initialize(clock:, parser:)
@@ -183,11 +193,12 @@ module InMemory
       @goals = CollectionRepository.new
       @drafts = DraftRepository.new
       @installment_plans = InstallmentPlanRepository.new
+      @pending_imports = PendingImportRepository.new
     end
 
     def router
       Config::Router.new(handlers: [setup_handler, reports_handler, help_handler,
-                                    installments_handler, expense_handler])
+                                    imports_handler, installments_handler, expense_handler])
     end
 
     def setup_handler
@@ -199,6 +210,21 @@ module InMemory
           input_parser: Features::Setup::InputParser.new, clock: clock
         ),
         presenter: Features::Setup::Presenter.new
+      )
+    end
+
+    def imports_handler
+      Features::Imports::Handler.new(
+        prepare_import: Features::Imports::PrepareImport.new(
+          installment_repository: installment_plans, expense_repository: expenses,
+          pending_repository: pending_imports
+        ),
+        confirm_import: Features::Imports::ConfirmImport.new(
+          category_repository: categories, installment_repository: installment_plans,
+          expense_repository: expenses, pending_repository: pending_imports, clock: clock
+        ),
+        category_repository: categories, pending_repository: pending_imports,
+        presenter: Features::Imports::Presenter.new
       )
     end
 

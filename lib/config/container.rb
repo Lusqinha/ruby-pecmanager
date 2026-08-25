@@ -14,7 +14,7 @@ module Config
     # the free-text fallback, so it answers last.
     def router
       @router ||= Router.new(handlers: [setup_handler, reports_handler, help_handler,
-                                        installments_handler, expense_handler])
+                                        imports_handler, installments_handler, expense_handler])
     end
 
     def setup_handler
@@ -45,6 +45,21 @@ module Config
         ),
         undo_expense: Features::Expense::UndoExpense.new(expense_repository: expenses, clock: @clock),
         presenter: Features::Expense::Presenter.new
+      )
+    end
+
+    def imports_handler
+      Features::Imports::Handler.new(
+        prepare_import: Features::Imports::PrepareImport.new(
+          installment_repository: installment_plans, expense_repository: expenses,
+          pending_repository: pending_imports
+        ),
+        confirm_import: Features::Imports::ConfirmImport.new(
+          category_repository: categories, installment_repository: installment_plans,
+          expense_repository: expenses, pending_repository: pending_imports, clock: @clock
+        ),
+        category_repository: categories, pending_repository: pending_imports,
+        presenter: Features::Imports::Presenter.new
       )
     end
 
@@ -93,6 +108,7 @@ module Config
     def subscriptions = @subscriptions ||= store::SubscriptionRepository.new(@db)
     def goals = @goals ||= store::GoalRepository.new(@db)
     def installment_plans = @installment_plans ||= store::InstallmentPlanRepository.new(@db)
+    def pending_imports = @pending_imports ||= store::PendingImportRepository.new(@db)
     def drafts = @drafts ||= store::DraftRepository.new(@db, serializer: Features::Setup::DraftSerializer)
 
     # The registry resolves LLM_BACKEND, so a new provider never touches this

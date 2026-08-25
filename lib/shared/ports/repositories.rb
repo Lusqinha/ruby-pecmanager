@@ -42,6 +42,10 @@ module Ports
     abstract :for_user, :active, :find, :add, :save
   end
 
+  class PendingImportRepository < AbstractPort
+    abstract :find, :save, :delete
+  end
+
   class DraftRepository < AbstractPort
     abstract :find, :save, :delete
   end

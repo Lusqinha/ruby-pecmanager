@@ -2,7 +2,7 @@
 
 module Domain
   class Expense
-    SOURCES = %w[llm regex manual].freeze
+    SOURCES = %w[llm regex manual import].freeze
     UNDO_WINDOW_SECONDS = 300
 
     attr_reader :id, :user_id, :category_id, :amount, :description, :spent_on, :source, :created_at

@@ -14,6 +14,8 @@ Parcelou? `1200 em 12x notebook` ou `12x de 100 notebook`.
           /categoria mercado — detalhe de uma categoria
           /metas — progresso das reservas
           /parcelas — parcelamentos em aberto
+          /importar_parcelas — cadastrar parcelas do cartão por JSON
+          /importar_gastos — lançar vários gastos por JSON
           /projecao — quanto sobra por mês até a última parcela
           /desfazer — apaga o último lançamento (5 min)
           /setup — refaz a configuração

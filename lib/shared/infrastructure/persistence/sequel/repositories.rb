@@ -74,6 +74,19 @@ module Infrastructure
         end
       end
 
+      class PendingImportRepository < Repository
+        def find(user_id) = db[:pending_imports][user_id: user_id]&.fetch(:payload)
+
+        def save(user_id, payload)
+          row = { user_id: user_id, payload: payload, created_at: Time.now }
+          existing = db[:pending_imports].where(user_id: user_id)
+          existing.any? ? existing.update(row) : db[:pending_imports].insert(row)
+          payload
+        end
+
+        def delete(user_id) = db[:pending_imports].where(user_id: user_id).delete
+      end
+
       class InstallmentPlanRepository < Repository
         def for_user(user_id)
           db[:installment_plans].where(user_id: user_id).order(:id).map { |row| Mappers.installment_plan(row) }
