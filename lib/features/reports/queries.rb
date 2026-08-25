@@ -79,6 +79,54 @@ module Features
       end
     end
 
+    # Fechamento da semana: o que saiu desde segunda e quanto resta de budget
+    # para os dias que ainda faltam no mês.
+    class ViewWeekly
+      def initialize(plan_assembler:, expense_repository:, clock:)
+        @plan_assembler = plan_assembler
+        @expense_repository = expense_repository
+        @clock = clock
+      end
+
+      def call(user_id:)
+        today = @clock.today
+        user, plan = @plan_assembler.call(user_id: user_id)
+        return nil unless user
+
+        week = week_range(today)
+        days_left = days_left(today)
+        month_totals = @expense_repository.totals_by_category(user_id, Domain::Month.range(today))
+        week_totals = @expense_repository.totals_by_category(user_id, week)
+
+        WeeklyReport.new(
+          from: week.first, to: week.last, days_left: days_left,
+          spent: total(week_totals),
+          lines: lines(plan, month_totals, week_totals, days_left)
+        )
+      end
+
+      private
+
+      # Segunda até hoje: a semana corrente, não os últimos sete dias.
+      def week_range(today) = (today - ((today.wday + 6) % 7))..today
+
+      # Inclui hoje: sobrar "0 dia" só quando o mês virou.
+      def days_left(today) = (Domain::Month.range(today).last - today).to_i + 1
+
+      def lines(plan, month_totals, week_totals, days_left)
+        plan.categories.map do |category|
+          limit = category.budget_for(plan.net_income)
+          spent = month_totals[category.id] || Domain::Money.zero
+          WeeklyLine.new(category_name: category.name,
+                         week: week_totals[category.id] || Domain::Money.zero,
+                         left: [limit - spent, Domain::Money.zero].max,
+                         days_left: days_left)
+        end.sort_by { |line| -line.week.cents }
+      end
+
+      def total(totals) = totals.values.reduce(Domain::Money.zero) { |sum, value| sum + value }
+    end
+
     # Total gasto em cada um dos últimos meses, do mais antigo para o atual.
     class ViewHistory
       MONTHS = 6

@@ -19,5 +19,6 @@ container = Config::Container.new(db: db)
 container.llm_parser.warmup if container.llm_parser.respond_to?(:warmup)
 
 Infrastructure::Telegram::BotRunner.new(
-  token: token, allowed_user_ids: allowed, controller: container.router
+  token: token, allowed_user_ids: allowed, controller: container.router,
+  digest: container.weekly_digest
 ).run

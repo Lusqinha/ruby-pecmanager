@@ -111,6 +111,17 @@ module Config
       )
     end
 
+    # Sexta, 16h: fechamento da semana entregue sem ninguém pedir.
+    def weekly_digest
+      Features::Reports::WeeklyDigest.new(
+        weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler,
+                                                  expense_repository: expenses, clock: @clock),
+        presenter: Features::Reports::Presenter.new,
+        delivery_repository: deliveries,
+        schedule: Infrastructure::Schedule.new(weekday: Integer(ENV.fetch("DIGEST_WEEKDAY", "5")), hour: Integer(ENV.fetch("DIGEST_HOUR", "16")))
+      )
+    end
+
     def reports_handler
 
       Features::Reports::Handler.new(
@@ -119,6 +130,7 @@ module Config
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: @clock),
         projection: view_projection,
         history: Features::Reports::ViewHistory.new(expense_repository: expenses, clock: @clock),
+        weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: @clock),
         presenter: Features::Reports::Presenter.new
       )
     end
@@ -135,6 +147,7 @@ module Config
     def goals = @goals ||= store::GoalRepository.new(@db)
     def installment_plans = @installment_plans ||= store::InstallmentPlanRepository.new(@db)
     def pending_imports = @pending_imports ||= store::PendingImportRepository.new(@db)
+    def deliveries = @deliveries ||= store::DeliveryRepository.new(@db)
     def drafts = @drafts ||= store::DraftRepository.new(@db, serializer: Features::Setup::DraftSerializer)
 
     # The registry resolves LLM_BACKEND, so a new provider never touches this

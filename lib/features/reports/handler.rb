@@ -4,6 +4,7 @@ module Features
   module Reports
     class Handler < Shared::Handler
       route "/hoje", to: :daily
+      route "/semana", to: :weekly
       route "/grafico", to: :menu
       route "/gráfico", to: :menu
       callback("chart:categories", to: :chart)
@@ -14,7 +15,8 @@ module Features
       route "/projeção", to: :projection
       route(%r{\A/categoria(?:\s+(.+))?\z}i, to: :category)
 
-      def initialize(daily:, monthly:, category:, projection:, history:, presenter:)
+      def initialize(daily:, monthly:, category:, projection:, history:, weekly:, presenter:)
+        @weekly = weekly
         @history = history
         @daily = daily
         @monthly = monthly
@@ -25,6 +27,7 @@ module Features
 
       def daily(request) = @presenter.daily(@daily.call(user_id: request.user_id))
       def menu(_request) = @presenter.chart_menu
+      def weekly(request) = @presenter.weekly(@weekly.call(user_id: request.user_id))
       def chart(request) = @presenter.chart(@monthly.call(user_id: request.user_id))
       def history(request) = @presenter.history(@history.call(user_id: request.user_id))
       def monthly(request) = @presenter.monthly(@monthly.call(user_id: request.user_id))

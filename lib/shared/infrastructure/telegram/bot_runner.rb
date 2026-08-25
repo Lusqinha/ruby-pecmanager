@@ -13,20 +13,52 @@ module Infrastructure
       # Uma fatura em JSON não passa disso; o limite existe para que um anexo
       # qualquer não vire download de megabytes.
       MAX_DOCUMENT_BYTES = 512 * 1024
+      CHECK_INTERVAL = 60
       FAILURE_MESSAGE = "Não consegui processar essa mensagem. Tente novamente."
-      def initialize(token:, allowed_user_ids:, controller:, logger: Infrastructure::Log.for("telegram"))
+      def initialize(token:, allowed_user_ids:, controller:, digest: nil,
+                     logger: Infrastructure::Log.for("telegram"))
         @token = token
         @allowed_user_ids = allowed_user_ids
         @controller = controller
+        @digest = digest
         @logger = logger
       end
 
       def run
         ::Telegram::Bot::Client.run(@token) do |bot|
           @logger&.info("Bot iniciado. Usuários autorizados: #{@allowed_user_ids.size}")
+          deliver_periodically(bot)
           bot.listen { |update| dispatch(bot, update) }
         end
       end
+
+      private
+
+      # O bot já fica de pé por causa do long polling, então a entrega periódica
+      # é uma thread que acorda de minuto em minuto e pergunta se é hora. Quem
+      # decide isso é o digest; aqui só se entrega o que ele devolver.
+      def deliver_periodically(bot)
+        return unless @digest
+
+        Thread.new do
+          loop do
+            deliver_due(bot)
+            sleep(CHECK_INTERVAL)
+          end
+        end
+      end
+
+      def deliver_due(bot)
+        @digest.call(user_ids: @allowed_user_ids).each do |user_id, message|
+          send_reply(bot, user_id, message)
+          @logger&.info("Relatório semanal enviado para #{user_id}")
+        end
+      rescue StandardError => e
+        # Falha na entrega não pode derrubar a thread nem o bot.
+        @logger&.error("Falha na entrega periódica: #{e.class}: #{safe(e.message)}")
+      end
+
+      public
 
       private
 
