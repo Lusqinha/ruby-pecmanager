@@ -4,6 +4,8 @@ module Features
   module Reports
     class Handler < Shared::Handler
       route "/hoje", to: :daily
+      route "/grafico", to: :chart
+      route "/gráfico", to: :chart
       route "/mes", to: :monthly
       route "/mês", to: :monthly
       route "/projecao", to: :projection
@@ -19,6 +21,7 @@ module Features
       end
 
       def daily(request) = @presenter.daily(@daily.call(user_id: request.user_id))
+      def chart(request) = @presenter.chart(@monthly.call(user_id: request.user_id))
       def monthly(request) = @presenter.monthly(@monthly.call(user_id: request.user_id))
       def projection(request) = @presenter.projection(@projection.call(user_id: request.user_id))
 
