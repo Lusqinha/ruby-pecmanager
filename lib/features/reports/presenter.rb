@@ -26,6 +26,30 @@ module Features
         Interface::ViewMessage.text(lines.join("\n"))
       end
 
+      def chart(report)
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
+
+        rows = report.lines.reject { |line| line.spent.zero? && line.limit.zero? }
+        return Interface::ViewMessage.text("Nenhum lançamento neste mês.") if rows.empty?
+
+        Interface::ViewMessage.image(
+          Interface::BarChart.render(rows.map { |line| { value: line.spent, limit: line.limit } }),
+          caption: chart_caption(report, rows)
+        )
+      end
+
+      def chart_caption(report, rows)
+        lines = ["*#{report.month.strftime('%m/%Y')}* — gasto #{Interface::Brl.format(report.total)}", ""]
+        lines += rows.each_with_index.map { |line, index| chart_legend(line, index) }
+        lines << "" << "Parcelas: #{Interface::Brl.format(report.installments_total)}" if report.installments_total.positive?
+        lines.join("\n")
+      end
+
+      def chart_legend(line, index)
+        limit = line.limit.zero? ? "sem limite" : "de #{Interface::Brl.format(line.limit)}"
+        "#{index + 1}. #{line.category_name}: #{Interface::Brl.format(line.spent)} #{limit}"
+      end
+
       def category(report)
         return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 

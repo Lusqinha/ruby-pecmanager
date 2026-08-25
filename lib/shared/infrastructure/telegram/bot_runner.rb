@@ -3,6 +3,7 @@
 require "telegram/bot"
 require "net/http"
 require "uri"
+require "tempfile"
 
 module Infrastructure
   module Telegram
@@ -97,8 +98,24 @@ module Infrastructure
 
       def allowed?(user_id) = @allowed_user_ids.include?(user_id)
 
+      # A gem envia arquivo, não bytes soltos: o PNG passa por um Tempfile, que
+      # some sozinho quando o bloco termina.
+      def send_photo(bot, chat_id, reply)
+        Tempfile.create(["grafico", ".png"], binmode: true) do |file|
+          file.write(reply.photo)
+          file.flush
+          bot.api.send_photo(chat_id: chat_id, photo: Faraday::Multipart::FilePart.new(file.path, "image/png"),
+                             caption: reply.text, parse_mode: "Markdown")
+        end
+      rescue StandardError => e
+        @logger&.error("Falha ao enviar imagem: #{e.class}: #{safe(e.message)}")
+        bot.api.send_message(chat_id: chat_id, text: reply.text)
+      end
+
       def send_reply(bot, chat_id, reply)
-        return if reply.nil? || reply.text.to_s.empty?
+        return if reply.nil?
+        return send_photo(bot, chat_id, reply) if reply.photo?
+        return if reply.text.to_s.empty?
 
         markup = markup_for(reply.keyboard)
         bot.api.send_message(chat_id: chat_id, text: reply.text, parse_mode: "Markdown", reply_markup: markup)

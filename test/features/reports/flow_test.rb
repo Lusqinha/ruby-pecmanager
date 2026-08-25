@@ -70,4 +70,24 @@ class ReportsFlowTest < SliceCase
     # 100,00 da parcela entram na linha de Transporte
     assert_includes reply.text, "Transporte: █░░░░░░░░░ R$ 100,00/R$ 1.000,00"
   end
+
+  def test_the_chart_comes_back_as_a_png_with_a_legend
+    @factory.seed_user
+    send_text("35 mercado")
+
+    reply = send_text("/grafico")
+
+    assert reply.photo?
+    assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
+    assert_includes reply.text, "1. Mercado: R$ 35,00 de R$ 500,00"
+  end
+
+  def test_a_month_without_movement_answers_in_text
+    @factory.seed_user(categories: [])
+
+    reply = send_text("/grafico")
+
+    refute reply.photo?
+    assert_includes reply.text, "Nenhum lançamento"
+  end
 end
