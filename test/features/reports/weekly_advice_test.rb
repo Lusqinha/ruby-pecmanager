@@ -29,7 +29,7 @@ class WeeklyAdviceTest < SliceCase
   end
 
   def plan_assembler
-    Features::Reports::PlanAssembler.new(user_repository: @factory.users, category_repository: @factory.categories,
+    Shared::PlanAssembler.new(user_repository: @factory.users, category_repository: @factory.categories,
                                          fixed_cost_repository: @factory.fixed_costs,
                                          subscription_repository: @factory.subscriptions,
                                          goal_repository: @factory.goals)

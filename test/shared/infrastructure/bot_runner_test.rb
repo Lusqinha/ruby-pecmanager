@@ -64,4 +64,22 @@ class BotRunnerTest < Minitest::Test
   def test_a_broken_answer_is_swallowed_instead_of_killing_the_loop
     assert_nil download(Object.new, json_document)
   end
+
+  # Registra o que a gem receberia: o arquivo sai com o nome do ViewMessage.
+  SendingApi = Struct.new(:sent) do
+    def send_document(**payload) = sent << payload
+  end
+
+  def test_a_view_message_with_a_document_is_sent_as_a_file
+    api = SendingApi.new([])
+    runner = StubbedRunner.new(controller: nil, token: "123:ABC", allowed_user_ids: [3], logger: nil)
+    reply = Interface::ViewMessage.file("# oi", filename: "pecman-2026-08-25.md", caption: "Exportação")
+
+    runner.send(:send_reply, FakeBot.new(api), 9, reply)
+    payload = api.sent.first
+
+    assert_equal 9, payload[:chat_id]
+    assert_equal "Exportação", payload[:caption]
+    assert_equal "pecman-2026-08-25.md", payload[:document].original_filename
+  end
 end

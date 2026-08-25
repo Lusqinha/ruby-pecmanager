@@ -39,6 +39,55 @@ class ProjectionTest < SliceCase
     assert goal.covered_on >= Domain::Month.first_of(TODAY)
   end
 
+  def test_the_horizon_stretches_to_the_longest_goal_deadline
+    @factory.seed_user
+    @factory.goals.replace_all(3, [Domain::Goal.new(name: "reserva", target: money(1_000_000),
+                                                    deadline: Date.new(2027, 2, 1))])
+
+    report = @factory.view_projection.call(user_id: 3)
+
+    assert_equal Date.new(2027, 2, 1), report.lines.last.month
+    assert_equal 166_667, report.goals.first.monthly.cents # 1.000.000 em 6 meses
+  end
+
+  # Duas caixinhas dividem a mesma sobra: a segunda só fecha depois da primeira.
+  def test_goals_queue_up_on_the_same_leftover
+    @factory.seed_user
+    @factory.goals.replace_all(3, [
+                                 Domain::Goal.new(name: "PC", target: money(400_000)),
+                                 Domain::Goal.new(name: "Viagem", target: money(400_000))
+                               ])
+
+    report = @factory.view_projection.call(user_id: 3)
+    first, second = report.goals
+
+    assert first.covered_on < second.covered_on
+  end
+
+  def test_a_subscription_inside_a_budget_is_not_subtracted_twice
+    @factory.seed_user(categories: [["Assinaturas", []]])
+    @factory.subscriptions.replace_all(3, [Domain::Subscription.new(name: "Netflix", amount: money(4_000))])
+
+    report = @factory.view_projection.call(user_id: 3)
+
+    assert report.subscriptions_in_budget?
+    # 5.000,00 − 500,00 de budget, e nada a mais pela assinatura.
+    assert_equal 450_000, report.lines.first.leftover.cents
+  end
+
+  def test_the_projection_message_shows_the_pace_of_each_box_and_a_chart_button
+    @factory.seed_user
+    @factory.goals.replace_all(3, [Domain::Goal.new(name: "reserva", target: money(1_000_000),
+                                                    deadline: Date.new(2027, 8, 1))])
+
+    reply = send_text("/projecao")
+
+    assert_includes reply.text, "guardar *R$ 833,34/mês* até 08/2027"
+    assert_includes reply.text, "Mês a mês"
+    assert_equal [["Gráfico do acumulado", "chart:accumulated"]], reply.keyboard.flatten(1)
+    assert tap_button("chart:accumulated").photo?
+  end
+
   def test_the_net_income_is_the_salary_minus_deductions
     @factory.seed_user
     @factory.fixed_costs.replace_all(3, [

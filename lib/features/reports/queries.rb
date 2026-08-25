@@ -34,47 +34,77 @@ module Features
         @clock = clock
       end
 
-      def call(user_id:)
-        today = @clock.today
+      def call(user_id:, month: nil)
         user, plan = @plan_assembler.call(user_id: user_id)
         return nil unless user
 
-        totals = @expense_repository.totals_by_category(user_id, Domain::Month.range(today))
-        plans = @installment_repository.active(user_id, today)
-        installment_lines = installment_lines(plans, today)
-        committed = user.installments_in_budget? ? by_category(plans, today) : {}
+        month = Domain::Month.first_of(month || @clock.today)
+        current = month == Domain::Month.first_of(@clock.today)
+        totals = @expense_repository.totals_by_category(user_id, Domain::Month.range(month))
+        plans = @installment_repository.active(user_id, month)
 
-        lines = plan.categories.map do |category|
-          spent = (totals[category.id] || Domain::Money.zero) + (committed[category.id] || Domain::Money.zero)
-          MonthlyLine.new(category_name: category.name, spent: spent,
-                          limit: category.budget_for(plan.net_income))
-        end.sort_by { |line| -line.spent.cents }
-
-        MonthlyReport.new(
-          month: today, lines: lines,
-          uncategorized: totals[nil] || Domain::Money.zero,
-          total: totals.values.reduce(Domain::Money.zero) { |sum, value| sum + value },
-          summary: plan.summary(today),
-          installment_lines: installment_lines,
-          installments_total: installment_lines.reduce(Domain::Money.zero) { |sum, line| sum + line.amount }
-        )
+        build(month, current, plan, user, totals, plans)
       end
 
       private
 
-      def installment_lines(plans, today)
+      def build(month, current, plan, user, totals, plans)
+        lines = category_lines(plan, totals, plans, user, month)
+        installments = installment_lines(plans, month)
+        installments_total = installments.reduce(Domain::Money.zero) { |sum, line| sum + line.amount }
+        summary = plan.summary(month)
+        # A parcela dentro do teto já foi descontada com o budget.
+        leftover = plan.leftover(user.installments_in_budget? ? Domain::Money.zero : installments_total)
+
+        MonthlyReport.new(
+          month: month, current: current, lines: lines,
+          uncategorized: totals[nil] || Domain::Money.zero,
+          # Assinatura dentro do teto de uma categoria é gasto do mês como
+          # qualquer outro, mesmo sem lançamento.
+          total: totals.values.reduce(Domain::Money.zero) { |sum, value| sum + value } +
+                 (plan.subscriptions_in_budget? ? plan.subscriptions_total : Domain::Money.zero),
+          summary: summary, leftover: leftover,
+          installment_lines: installments, installments_total: installments_total,
+          allocation: Domain::Allocation.of(leftover, plan.goals),
+          moves: rebalance(current, summary, leftover, lines)
+        )
+      end
+
+      def category_lines(plan, totals, plans, user, month)
+        committed = user.installments_in_budget? ? by_category(plans, month) : {}
+
+        plan.categories.map do |category|
+          spent = plan.spent_for(category, totals) + (committed[category.id] || Domain::Money.zero)
+          MonthlyLine.new(category_name: category.name, spent: spent,
+                          limit: category.budget_for(plan.net_income))
+        end.sort_by { |line| -line.spent.cents }
+      end
+
+      # Só no mês corrente: num mês futuro nada foi gasto ainda, e toda
+      # categoria pareceria folgada.
+      def rebalance(current, summary, leftover, lines)
+        return [] unless current
+
+        Domain::Rebalance.moves(summary.goals - leftover, slots(lines))
+      end
+
+      def slots(lines)
+        lines.map { |line| Domain::Rebalance::Slot.new(name: line.category_name, limit: line.limit, spent: line.spent) }
+      end
+
+      def installment_lines(plans, month)
         plans.map do |plan|
-          InstallmentLine.new(description: plan.description, label: plan.label_in(today),
-                              amount: plan.due_in(today), origin: plan.origin)
+          InstallmentLine.new(description: plan.description, label: plan.label_in(month),
+                              amount: plan.due_in(month), origin: plan.origin)
         end
       end
 
       # Só quando a opção está ligada: a parcela vira gasto da categoria dela.
-      def by_category(plans, today)
+      def by_category(plans, month)
         plans.each_with_object({}) do |plan, totals|
           next unless plan.category_id
 
-          totals[plan.category_id] = (totals[plan.category_id] || Domain::Money.zero) + plan.due_in(today)
+          totals[plan.category_id] = (totals[plan.category_id] || Domain::Money.zero) + plan.due_in(month)
         end
       end
     end
@@ -116,7 +146,7 @@ module Features
       def lines(plan, month_totals, week_totals, days_left)
         plan.categories.map do |category|
           limit = category.budget_for(plan.net_income)
-          spent = month_totals[category.id] || Domain::Money.zero
+          spent = plan.spent_for(category, month_totals)
           WeeklyLine.new(category_name: category.name,
                          week: week_totals[category.id] || Domain::Money.zero,
                          spent: spent, limit: limit,
@@ -171,9 +201,11 @@ module Features
         end
 
         expenses = @expense_repository.for_category(user_id, category.id, Domain::Month.range(today))
+        booked = expenses.reduce(Domain::Money.zero) { |total, expense| total + expense.amount }
+        subscriptions = plan.spent_for(category, {}) # zero fora da categoria de assinaturas
         CategoryReport.new(
           status: :found, category_name: category.name, month: today,
-          spent: expenses.reduce(Domain::Money.zero) { |total, expense| total + expense.amount },
+          spent: booked + subscriptions, subscriptions: subscriptions,
           limit: category.budget_for(plan.net_income),
           entries: expenses.sort_by { |expense| [-expense.spent_on.jd, -expense.id.to_i] }.first(LIMIT).map do |expense|
             CategoryEntry.new(date: expense.spent_on, amount: expense.amount, description: expense.description)
