@@ -8,6 +8,7 @@ module Features
         when :recorded then recorded(result)
         when :listed then listed(result)
         when :cancelled then cancelled(result)
+        when :toggled then toggled(result)
         when :missing then Interface::ViewMessage.text("Não achei esse parcelamento.")
         else Interface::ViewMessage.text("Não entendi o parcelamento. Tenta `1200 em 12x notebook`.")
         end
@@ -31,10 +32,27 @@ module Features
         lines = result.plans.map { |plan| plan_line(plan, result.month) }
         lines += ["", "Comprometido este mês: *#{Interface::Brl.format(total)}*"]
 
-        Interface::ViewMessage.new(
-          text: lines.join("\n"),
-          keyboard: result.plans.map { |plan| [["Encerrar #{plan.description}", "plan:cancel:#{plan.id}"]] }
-        )
+        Interface::ViewMessage.new(text: lines.join("\n"), keyboard: keyboard(result))
+      end
+
+      def keyboard(result)
+        result.plans.map { |plan| [["Encerrar #{plan.description}", "plan:cancel:#{plan.id}"]] } + [[toggle(result)]]
+      end
+
+      # O rótulo mostra o estado atual e o dado leva pro oposto.
+      def toggle(result)
+        return ["Contar no budget: sim", "plan:budget:off"] if result.in_budget
+
+        ["Contar no budget: não", "plan:budget:on"]
+      end
+
+      def toggled(result)
+        text = if result.in_budget
+                 "As parcelas passam a contar no budget das categorias."
+               else
+                 "As parcelas saem do budget e voltam a aparecer só no bloco de parcelas."
+               end
+        Interface::ViewMessage.new(text: text, keyboard: keyboard(result))
       end
 
       def plan_line(plan, month)

@@ -12,12 +12,18 @@ module Features
       # router antes da de expense, que engoliria a mensagem no fallback.
       route TextInput, to: :record
       callback(/\Aplan:cancel:(\d+)\z/, to: :cancel)
+      callback(/\Aplan:budget:(on|off)\z/, to: :toggle)
 
-      def initialize(record_installment:, cancel_installment:, view_installments:, presenter:)
+      def initialize(record_installment:, cancel_installment:, view_installments:, toggle_budget:, presenter:)
         @record_installment = record_installment
         @cancel_installment = cancel_installment
         @view_installments = view_installments
+        @toggle_budget = toggle_budget
         @presenter = presenter
+      end
+
+      def toggle(request, choice)
+        @presenter.call(@toggle_budget.call(user_id: request.user_id, enabled: choice == "on"))
       end
 
       def list(request) = @presenter.call(@view_installments.call(user_id: request.user_id))

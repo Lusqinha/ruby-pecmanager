@@ -14,7 +14,8 @@ module Infrastructure
           return nil unless row
 
           Domain::User.new(id: row[:id], name: row[:name], salary: Domain::Money.new(row[:salary_cents].to_i),
-                           setup_done_at: row[:setup_done_at])
+                           setup_done_at: row[:setup_done_at],
+                           installments_in_budget: row[:installments_in_budget])
         end
 
         def category(row)

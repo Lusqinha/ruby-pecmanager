@@ -19,6 +19,8 @@ Parcelou? `1200 em 12x notebook` ou `12x de 100 notebook`.
           /projecao — quanto sobra por mês até a última parcela
           /desfazer — apaga o último lançamento (5 min)
           /setup — refaz a configuração
+          /reverter 30 — desfaz o que entrou nos últimos 30 min
+          /apagar_tudo — apaga tudo e recomeça
 
           Ou escreve como fala: `cancela`, `deixa quieto`, `me enganei` desfazem a última coisa.
         TXT

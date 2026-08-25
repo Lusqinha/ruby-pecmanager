@@ -26,7 +26,8 @@ module Features
     end
 
     class ViewMonthly
-      def initialize(plan_assembler:, expense_repository:, installment_repository:, clock:)
+      def initialize(plan_assembler:, expense_repository:, installment_repository:, clock:, user_repository: nil)
+        @user_repository = user_repository
         @plan_assembler = plan_assembler
         @expense_repository = expense_repository
         @installment_repository = installment_repository
@@ -39,11 +40,14 @@ module Features
         return nil unless user
 
         totals = @expense_repository.totals_by_category(user_id, Domain::Month.range(today))
-        installment_lines = installments(user_id, today)
+        plans = @installment_repository.active(user_id, today)
+        installment_lines = installment_lines(plans, today)
+        committed = user.installments_in_budget? ? by_category(plans, today) : {}
+
         lines = plan.categories.map do |category|
-          MonthlyLine.new(category_name: category.name,
-                               spent: totals[category.id] || Domain::Money.zero,
-                               limit: category.budget_for(plan.net_income))
+          spent = (totals[category.id] || Domain::Money.zero) + (committed[category.id] || Domain::Money.zero)
+          MonthlyLine.new(category_name: category.name, spent: spent,
+                          limit: category.budget_for(plan.net_income))
         end.sort_by { |line| -line.spent.cents }
 
         MonthlyReport.new(
@@ -58,10 +62,19 @@ module Features
 
       private
 
-      def installments(user_id, today)
-        @installment_repository.active(user_id, today).map do |plan|
+      def installment_lines(plans, today)
+        plans.map do |plan|
           InstallmentLine.new(description: plan.description, label: plan.label_in(today),
                               amount: plan.due_in(today), origin: plan.origin)
+        end
+      end
+
+      # Só quando a opção está ligada: a parcela vira gasto da categoria dela.
+      def by_category(plans, today)
+        plans.each_with_object({}) do |plan, totals|
+          next unless plan.category_id
+
+          totals[plan.category_id] = (totals[plan.category_id] || Domain::Money.zero) + plan.due_in(today)
         end
       end
     end

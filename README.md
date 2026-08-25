@@ -25,6 +25,24 @@ bot usa só o regex.
 rake test
 ```
 
+Branches no modelo gitflow: `main` guarda release, `develop` é a base do dia a
+dia, trabalho novo sai em `feature/<nome>` e volta pra `develop`. Correção
+urgente em produção sai de `main` como `hotfix/<nome>`.
+
+Commits no padrão conventional commits:
+
+```
+feat(installments): aceita mes por extenso no cadastro
+fix(imports): valor do lote pendente relido como reais
+refactor(reports): extrai calculo de projecao
+test(setup): cobre wizard PJ
+docs: atualiza readme
+chore: ajusta gitignore
+```
+
+Escopo é o slice (`setup`, `expense`, `installments`, `reports`, `imports`) ou
+vazio quando a mudança é transversal.
+
 Código em vertical slices: `lib/features/<assunto>/` com domínio, casos de uso,
 presenter e rotas juntos. `lib/shared/` é o que mais de um slice usa.
 

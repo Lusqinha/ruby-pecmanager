@@ -14,6 +14,8 @@ module InMemory
   class UserRepository < Base
     def find(id) = rows[id]
 
+    def delete(id) = rows.delete(id)
+
     def save(user)
       rows[user.id] = user
     end
@@ -77,6 +79,10 @@ module InMemory
     end
 
     def last_for(user_id) = for_user(user_id).max_by(&:id)
+
+    def created_since(user_id, time)
+      for_user(user_id).select { |expense| expense.created_at && expense.created_at >= time }
+    end
 
     def for_period(user_id, range)
       for_user(user_id).select { |expense| range.cover?(expense.spent_on) }.sort_by(&:id)
@@ -151,6 +157,15 @@ module InMemory
 
     def active(user_id, month) = for_user(user_id).select { |plan| plan.active_in?(month) }
 
+    def created_since(user_id, time)
+      for_user(user_id).select { |plan| plan.created_at && plan.created_at >= time }
+    end
+
+    def delete(user_id, id)
+      plan = find(user_id, id)
+      rows.delete(id) if plan
+    end
+
     def find(user_id, id)
       plan = rows[id]
       plan if plan&.user_id == user_id
@@ -170,7 +185,7 @@ module InMemory
       Domain::InstallmentPlan.new(
         id: id, user_id: plan.user_id, category_id: plan.category_id, description: plan.description,
         origin: plan.origin, total: plan.total, count: plan.count, first_month: plan.first_month,
-        cancelled_on: plan.cancelled_on, created_at: plan.created_at
+        cancelled_on: plan.cancelled_on, created_at: plan.created_at || Time.now
       )
     end
   end
@@ -197,7 +212,7 @@ module InMemory
     end
 
     def router
-      Config::Router.new(handlers: [setup_handler, reports_handler, help_handler,
+      Config::Router.new(handlers: [setup_handler, account_handler, reports_handler, help_handler,
                                     imports_handler, installments_handler, expense_handler])
     end
 
@@ -213,6 +228,21 @@ module InMemory
       )
     end
 
+    def account_handler
+      Features::Account::Handler.new(
+        preview_rollback: Features::Account::PreviewRollback.new(
+          expense_repository: expenses, installment_repository: installment_plans, clock: clock
+        ),
+        apply_rollback: Features::Account::ApplyRollback.new(
+          expense_repository: expenses, installment_repository: installment_plans
+        ),
+        wipe_account: Features::Account::WipeAccount.new(
+          user_repository: users, draft_repository: drafts, pending_repository: pending_imports
+        ),
+        presenter: Features::Account::Presenter.new
+      )
+    end
+
     def imports_handler
       Features::Imports::Handler.new(
         prepare_import: Features::Imports::PrepareImport.new(
@@ -220,7 +250,7 @@ module InMemory
           pending_repository: pending_imports
         ),
         confirm_import: Features::Imports::ConfirmImport.new(
-          category_repository: categories, installment_repository: installment_plans,
+          category_repository: categories, installment_repository: installment_plans, user_repository: users,
           expense_repository: expenses, pending_repository: pending_imports, clock: clock
         ),
         category_repository: categories, pending_repository: pending_imports,
@@ -231,14 +261,17 @@ module InMemory
     def installments_handler
       Features::Installments::Handler.new(
         record_installment: Features::Installments::RecordInstallment.new(
-          category_repository: categories, installment_repository: installment_plans,
+          category_repository: categories, installment_repository: installment_plans, user_repository: users,
           parser: ParserProxy.new(self), clock: clock
         ),
         cancel_installment: Features::Installments::CancelInstallment.new(
           installment_repository: installment_plans, clock: clock
         ),
         view_installments: Features::Installments::ViewInstallments.new(
-          installment_repository: installment_plans, clock: clock
+          installment_repository: installment_plans, user_repository: users, clock: clock
+        ),
+        toggle_budget: Features::Installments::ToggleBudget.new(
+          user_repository: users, installment_repository: installment_plans, clock: clock
         ),
         presenter: Features::Installments::Presenter.new
       )
@@ -273,7 +306,7 @@ module InMemory
 
       Features::Reports::Handler.new(
         daily: Features::Reports::ViewDaily.new(expense_repository: expenses, category_repository: categories, clock: clock),
-        monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: clock),
+        monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: clock, user_repository: users),
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: clock),
         goals: Features::Reports::ViewGoals.new(goal_repository: goals, clock: clock),
         projection: view_projection,

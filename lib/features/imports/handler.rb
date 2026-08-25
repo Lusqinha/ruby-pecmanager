@@ -15,7 +15,7 @@ module Features
       route "/importar_gastos", to: :explain_expenses
       route "/importar", to: :explain_menu
       route JSON_TEXT, to: :receive
-      callback(/\Aimport:(ok|no)\z/, to: :decide)
+      callback(/\Aimport:(ok|no|budget|free)\z/, to: :decide)
 
       def initialize(prepare_import:, confirm_import:, category_repository:, pending_repository:, presenter:)
         @prepare_import = prepare_import
@@ -42,8 +42,10 @@ module Features
         @presenter.call(@prepare_import.call(user_id: request.user_id, text: request.text, kind: kind))
       end
 
+      DECISIONS = { "ok" => nil, "budget" => true, "free" => false }.freeze
+
       def decide(request, choice)
-        return confirm(request) if choice == "ok"
+        return confirm(request, DECISIONS[choice]) if DECISIONS.key?(choice)
 
         @pending_repository.delete(request.user_id)
         @presenter.call(Result.new(status: :discarded))
@@ -55,7 +57,9 @@ module Features
         @presenter.instructions(kind, @category_repository.for_user(request.user_id))
       end
 
-      def confirm(request) = @presenter.call(@confirm_import.call(user_id: request.user_id))
+      def confirm(request, in_budget)
+        @presenter.call(@confirm_import.call(user_id: request.user_id, in_budget: in_budget))
+      end
     end
   end
 end

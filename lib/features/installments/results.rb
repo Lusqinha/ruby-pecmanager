@@ -2,6 +2,7 @@
 
 module Features
   module Installments
-    Result = Struct.new(:status, :plan, :plans, :month, :category, :cancelled_count, keyword_init: true)
+    Result = Struct.new(:status, :plan, :plans, :month, :category, :cancelled_count, :in_budget,
+                        keyword_init: true)
   end
 end
