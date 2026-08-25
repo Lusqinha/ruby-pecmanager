@@ -32,7 +32,7 @@ module Infrastructure
                      # reloading the whole model before answering.
                      keep_alive: ENV.fetch("LLM_KEEP_ALIVE", "-1"),
                      options: {},
-                     logger: $stderr)
+                     logger: Infrastructure::Log.for("llm"))
         super(base_url: base_url, model: model, timeout: timeout, logger: logger)
         @keep_alive = numeric_keep_alive(keep_alive)
         @options = DEFAULTS.merge(env_options).merge(options)
@@ -51,7 +51,7 @@ module Infrastructure
         post(endpoint, { model: model, prompt: "", stream: false, keep_alive: @keep_alive })
         true
       rescue StandardError => e
-        logger&.puts("[llm] warmup falhou: #{e.class}: #{e.message}")
+        logger&.warn("Aquecimento do modelo falhou: #{e.class}: #{e.message}")
         false
       end
 

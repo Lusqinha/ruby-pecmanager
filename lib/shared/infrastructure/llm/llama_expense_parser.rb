@@ -12,7 +12,7 @@ module Infrastructure
       def initialize(base_url: ENV.fetch("LLAMA_URL", "http://localhost:8080"),
                      model: ENV.fetch("LLAMA_MODEL", "qwen"),
                      timeout: Integer(ENV.fetch("LLAMA_TIMEOUT", "8")),
-                     logger: $stderr)
+                     logger: Infrastructure::Log.for("llm"))
         super
       end
 

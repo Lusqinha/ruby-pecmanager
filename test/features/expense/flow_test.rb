@@ -86,7 +86,7 @@ class ExpenseFlowTest < SliceCase
     reply = send_text("bom dia")
 
     assert_empty @factory.expenses.rows
-    assert_includes reply.text, "Não entendi"
+    assert_includes reply.text, "Não identifiquei"
   end
 
   def test_unmatched_category_asks_and_learns_from_the_answer
@@ -166,7 +166,7 @@ class ExpenseFlowTest < SliceCase
 
     reply = tap_button("undo:1")
 
-    assert_includes reply.text, "janela"
+    assert_includes reply.text, "prazo de 5 minutos"
     assert_equal 1, @factory.expenses.rows.size
   end
 
@@ -179,7 +179,7 @@ class ExpenseFlowTest < SliceCase
     reply = tap_button("undo:1", user_id: 4)
 
     # The reply does not confirm that someone else's expense exists.
-    assert_includes reply.text, "Nada pra desfazer"
+    assert_includes reply.text, "Não há lançamento recente"
     assert_equal 1, @factory.expenses.rows.size
   end
   # 20% de 5.000 seria 1.000; com 6% de dedução o líquido é 4.700 e o teto cai

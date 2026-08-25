@@ -5,24 +5,24 @@ module Features
     # Every word the wizard says lives here.
     class Presenter
       ERRORS = {
-        invalid_amount: "Não peguei o valor. Manda só o número, tipo `4200` ou `4.200,50`.",
-        no_categories: "Manda as categorias separadas por vírgula, ou toca em *Usar o preset*.",
-        invalid_budget: "Não entendi. Manda `800` ou `15%` (ou /pular).",
-        invalid_items: "Não peguei esse formato.",
-        invalid_income_type: "Toca num dos botões: *Sou PJ* ou *Sou CLT*.",
-        unknown_step: "Perdi o fio da meada. Manda /setup pra recomeçar."
+        invalid_amount: "Valor não reconhecido. Informe apenas o número, como `4200` ou `4.200,50`.",
+        no_categories: "Informe as categorias separadas por vírgula, ou use o preset.",
+        invalid_budget: "Formato não reconhecido. Informe `800` ou `15%`, ou use /pular.",
+        invalid_items: "Formato não reconhecido.",
+        invalid_income_type: "Selecione uma das opções: *Sou PJ* ou *Sou CLT*.",
+        unknown_step: "Não consegui retomar a configuração. Use /setup para recomeçar."
       }.freeze
 
       def call(state)
-        return Interface::ViewMessage.text("Setup cancelado. Manda /setup quando quiser recomeçar.") if state.cancelled?
-        return Interface::ViewMessage.text("Setup salvo. Agora é só mandar os gastos, tipo `35 mercado`.") if state.completed?
+        return Interface::ViewMessage.text("Configuração cancelada. Use /setup quando quiser retomar.") if state.cancelled?
+        return Interface::ViewMessage.text("Configuração salva. Envie seus gastos, por exemplo: `35 mercado`.") if state.completed?
 
         body = state.invalid? ? "#{ERRORS.fetch(state.error, ERRORS[:invalid_items])}\n\n#{prompt(state)}" : "#{collected(state)}#{prompt(state)}"
         Interface::ViewMessage.new(text: body, keyboard: keyboard(state))
       end
 
       def intro
-        "Sou o PecMan. Vamos montar seu controle financeiro em 8 passos rápidos.\n" \
+        "Bem-vindo ao PecMan. A configuração leva 8 passos.\n" \
           "A qualquer momento: /voltar, /pular ou /cancelar.\n\n"
       end
 
@@ -30,14 +30,14 @@ module Features
 
       def prompt(state)
         case state.step
-        when :income_type then "#{intro}*Passo 1/8 — Como você recebe?*\nIsso muda o que eu pergunto sobre descontos."
+        when :income_type then "#{intro}*Passo 1/8 — Como você recebe?*\nA resposta define quais descontos serão perguntados."
         when :salary then salary_prompt(state.draft)
         when :deductions then deductions_prompt(state.draft)
         when :categories then categories_prompt
         when :budgets then budget_prompt(state.draft)
-        when :fixed_costs then "*Passo 6/8 — Custos fixos*\nO que sai todo mês da sua conta, um por linha: `aluguel 1200 dia 10`. Sem nenhum? *pronto*."
-        when :subscriptions then "*Passo 7/8 — Assinaturas*\nUma por linha: `netflix 39,90 dia 5` ou `dominio 60 anual`. Sem nenhuma? *pronto*."
-        when :goals then "*Passo 8/8 — Metas de reserva*\nUma por linha: `reserva 10000 até 12/2027`. Sem nenhuma? *pronto*."
+        when :fixed_costs then "*Passo 6/8 — Custos fixos*\nO que sai todo mês da sua conta, um por linha: `aluguel 1200 dia 10`. Se não houver, envie *pronto*."
+        when :subscriptions then "*Passo 7/8 — Assinaturas*\nUma por linha: `netflix 39,90 dia 5` ou `dominio 60 anual`. Se não houver, envie *pronto*."
+        when :goals then "*Passo 8/8 — Metas de reserva*\nUma por linha: `reserva 10000 até 12/2027`. Se não houver, envie *pronto*."
         when :confirm then summary(state)
         else ERRORS[:unknown_step]
         end
@@ -51,37 +51,37 @@ module Features
         return "" unless COLLECTIONS.include?(state.step)
 
         items = state.draft.public_send(state.step)
-        items.empty? ? "" : "_Anotado até agora: #{items.map(&:name).join(', ')}._\n\n"
+        items.empty? ? "" : "_Registrado até agora: #{items.map(&:name).join(', ')}._\n\n"
       end
 
       def salary_prompt(draft)
-        return "*Passo 2/8 — Receita*\nQuanto você fatura por mês, antes dos impostos?" if draft.pj?
+        return "*Passo 2/8 — Receita*\nQual seu faturamento mensal, antes dos impostos?" if draft.pj?
 
-        "*Passo 2/8 — Salário*\nQuanto cai na sua conta por mês?"
+        "*Passo 2/8 — Salário*\nQuanto você recebe por mês, já líquido?"
       end
 
       # PJ tem descontos que o próprio usuário calcula todo mês; CLT já recebe
       # líquido, então aqui só entra o que ele quiser acompanhar.
       def deductions_prompt(draft)
         if draft.pj?
-          "*Passo 3/8 — Descontos da receita*\nUm por linha, e o percentual sai da receita:\n" \
-            "`imposto 6%`\n`inss 178,31`\n`contabilidade 250`\nNão tem? *pronto*."
+          "*Passo 3/8 — Descontos da receita*\nUm por linha. Percentual é calculado sobre o faturamento:\n" \
+            "`imposto 6%`\n`inss 178,31`\n`contabilidade 250`\nSe não houver, envie *pronto*."
         else
-          "*Passo 3/8 — Descontos*\nSe quiser acompanhar o que sai antes de cair na conta, " \
-            "um por linha: `inss 400`, `plano de saúde 180`, `vale 8%`.\nNão quer? *pronto*."
+          "*Passo 3/8 — Descontos*\nSe quiser acompanhar o que é descontado antes do pagamento, " \
+            "um por linha: `inss 400`, `plano de saúde 180`, `vale 8%`.\nSe não quiser, envie *pronto*."
         end
       end
 
       def categories_prompt
-        "*Passo 4/8 — Categorias*\nUsa o preset (#{Features::Setup::Presets.names.join(', ')}) " \
-          "ou escreve as suas separadas por vírgula."
+        "*Passo 4/8 — Categorias*\nUse o preset (#{Features::Setup::Presets.names.join(', ')}) " \
+          "ou informe as suas, separadas por vírgula."
       end
 
       def budget_prompt(draft)
         category = draft.current_category
         return "" unless category
 
-        "*Passo 5/8 — Budgets*\nManda `800` (valor fixo) ou `15%` (do salário). /pular deixa sem limite.\n\n" \
+        "*Passo 5/8 — Budgets*\nInforme `800` (valor fixo) ou `15%` (da renda líquida). /pular deixa sem limite.\n\n" \
           "Budget de *#{category.name}*? (#{draft.budget_index + 1}/#{draft.categories.size})"
       end
 
@@ -96,7 +96,7 @@ module Features
       def summary(state)
         draft = state.draft
         summary = state.summary
-        lines = ["*Confere se está certo:*", "", income_line(draft, summary), "", "*Categorias*"]
+        lines = ["*Revise a configuração:*", "", income_line(draft, summary), "", "*Categorias*"]
         lines += draft.categories.map { |category| category_line(category, summary.salary) }
         lines += section("Descontos", draft.deductions) { |item| "· #{item.name}: #{cost_label(item, draft)}" }
         lines += section("Custos fixos", draft.fixed_costs) { |item| "· #{item.name}: #{Interface::Brl.format(item.amount)}#{due(item)}" }
