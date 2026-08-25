@@ -4,7 +4,7 @@ module Features
   module Reports
     class Presenter
       def daily(report)
-        return Interface::ViewMessage.text("Nada lançado hoje.") if report.entries.empty?
+        return Interface::ViewMessage.text("Nenhum lançamento hoje.") if report.entries.empty?
 
         lines = ["*Hoje (#{report.date.strftime('%d/%m')})* — #{Interface::Brl.format(report.total)}", ""]
         lines += report.entries.map do |entry|
@@ -14,7 +14,7 @@ module Features
       end
 
       def monthly(report)
-        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         summary = report.summary
         lines = ["*#{report.month.strftime('%m/%Y')}* — gasto #{Interface::Brl.format(report.total)} de #{Interface::Brl.format(summary.committed)} em budgets", ""]
@@ -27,21 +27,21 @@ module Features
       end
 
       def category(report)
-        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         unless report.found?
-          return Interface::ViewMessage.text("Não achei essa categoria. Suas: #{report.available_names.join(', ')}")
+          return Interface::ViewMessage.text("Categoria não encontrada. Disponíveis: #{report.available_names.join(', ')}")
         end
 
         lines = ["*#{report.category_name}* — #{report.month.strftime('%m/%Y')}",
                  category_line(report.category_name, report.spent, report.limit), ""]
         lines += report.entries.map { |entry| "· #{entry.date.strftime('%d/%m')} #{Interface::Brl.format(entry.amount)} #{entry.description}" }
-        lines << "_sem lançamentos neste mês_" if report.entries.empty?
+        lines << "_Sem lançamentos neste mês._" if report.entries.empty?
         Interface::ViewMessage.text(lines.join("\n"))
       end
 
       def projection(report)
-        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         lines = ["*Projeção* — líquido #{Interface::Brl.format(report.net_income)}/mês", ""]
         lines += report.lines.map { |line| projection_line(line) }
@@ -81,7 +81,7 @@ module Features
       end
 
       def goal_forecast(goal)
-        return "· #{goal.name}: fora do horizonte" unless goal.covered_on
+        return "· #{goal.name}: fora do horizonte da projeção" unless goal.covered_on
 
         "✅ #{goal.name} (#{Interface::Brl.format(goal.target)}) em #{goal.covered_on.strftime('%m/%Y')}"
       end

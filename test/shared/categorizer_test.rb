@@ -47,4 +47,17 @@ class CategorizerTest < Minitest::Test
     assert_nil Domain::Categorizer.resolve(merchants, "supermercado")
     assert_nil Domain::Categorizer.resolve(merchants, "padaria do bairro")
   end
+
+  # O Telegram entrega bytes: sem locale UTF-8 no host eles chegam assim, e o
+  # bot inteiro caía no primeiro acento.
+  def test_survives_text_that_arrives_as_raw_bytes
+    binary = "Farmácia".dup.force_encoding(Encoding::ASCII_8BIT)
+
+    assert_equal "Saúde", Domain::Categorizer.resolve(categories, binary).name
+    assert_equal "farmacia", Domain::Categorizer.normalize(binary)
+  end
+
+  def test_drops_a_stray_invalid_byte
+    assert_equal "uber", Domain::Categorizer.normalize("uber\xC3".dup.force_encoding(Encoding::UTF_8))
+  end
 end

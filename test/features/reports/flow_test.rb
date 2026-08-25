@@ -34,8 +34,8 @@ class ReportsFlowTest < SliceCase
     send_text("35 mercado")
 
     assert_includes send_text("/categoria mercado").text, "R$ 35,00"
-    assert_includes send_text("/categoria nao existe").text, "Não achei"
-    assert_includes send_text("/categoria").text, "Não achei"
+    assert_includes send_text("/categoria nao existe").text, "Categoria não encontrada"
+    assert_includes send_text("/categoria").text, "Categoria não encontrada"
   end
 
   def test_goals_report_shows_the_monthly_pace

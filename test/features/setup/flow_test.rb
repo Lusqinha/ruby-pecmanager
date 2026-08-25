@@ -19,7 +19,7 @@ class SetupFlowTest < SliceCase
     send_text("/cancelar")
     send_text("oi")
 
-    assert_includes tap_button("clt").text, "cai na sua conta"
+    assert_includes tap_button("clt").text, "já líquido"
   end
 
   def test_the_deductions_step_marks_everything_as_a_deduction
@@ -45,7 +45,7 @@ class SetupFlowTest < SliceCase
     reply = send_text("/mes") # not a report: the wizard owns the conversation
 
     assert_includes reply.text, "Passo 2/8"
-    assert_includes reply.text, "Não peguei o valor"
+    assert_includes reply.text, "Valor não reconhecido"
   end
 
   def test_fixed_costs_accept_percentage_deductions
@@ -89,7 +89,7 @@ class SetupFlowTest < SliceCase
     tap_button("clt")
     reply = send_text("muito dinheiro")
 
-    assert_includes reply.text, "Não peguei o valor"
+    assert_includes reply.text, "Valor não reconhecido"
     assert_equal :salary, @factory.drafts.find(3)[:step]
   end
 

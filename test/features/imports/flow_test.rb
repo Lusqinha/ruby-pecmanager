@@ -59,7 +59,7 @@ class ImportFlowTest < SliceCase
     tap_button("import:no")
 
     assert_empty @factory.installment_plans.for_user(3)
-    assert_includes tap_button("import:ok").text, "Não tem import"
+    assert_includes tap_button("import:ok").text, "Nenhuma importação"
   end
 
   def test_importing_the_same_invoice_again_finds_the_duplicates
@@ -69,7 +69,7 @@ class ImportFlowTest < SliceCase
 
     reply = send_text(parcelas)
 
-    assert_includes reply.text, "já estava lançado"
+    assert_includes reply.text, "já estavam lançados"
     assert_equal 2, @factory.installment_plans.for_user(3).size
   end
 
@@ -94,7 +94,7 @@ class ImportFlowTest < SliceCase
 
     reply = send_text(mixed)
 
-    assert_includes reply.text, "Separa em dois JSON"
+    assert_includes reply.text, "Separe em dois arquivos"
     assert_empty @factory.expenses.rows
   end
   def test_choosing_out_of_the_budget_skips_categorization

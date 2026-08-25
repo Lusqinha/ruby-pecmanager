@@ -5,8 +5,8 @@ module Features
     class Presenter
       def call
         Interface::ViewMessage.text(<<~TXT)
-          Manda o gasto em texto livre: `35 mercado`, `12,50 uber ontem`, `R$ 89,90 farmácia dia 12`.
-Parcelou? `1200 em 12x notebook` ou `12x de 100 notebook`.
+          Envie o gasto em texto livre: `35 mercado`, `12,50 uber ontem`, `R$ 89,90 farmácia dia 12`.
+Para parcelamento: `1200 em 12x notebook` ou `12x de 100 notebook`.
 
           *Comandos*
           /hoje — o que saiu hoje
@@ -22,7 +22,7 @@ Parcelou? `1200 em 12x notebook` ou `12x de 100 notebook`.
           /reverter 30 — desfaz o que entrou nos últimos 30 min
           /apagar_tudo — apaga tudo e recomeça
 
-          Ou escreve como fala: `cancela`, `deixa quieto`, `me enganei` desfazem a última coisa.
+          Também aceito linguagem corrente: `cancela`, `deixa quieto` e `me enganei` desfazem o último lançamento.
         TXT
       end
     end

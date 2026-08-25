@@ -7,32 +7,32 @@ module Features
 
       def rollback(result)
         case result.status
-        when :invalid then Interface::ViewMessage.text("Diz quantos minutos: `/reverter 30`.")
-        when :applied then Interface::ViewMessage.text("Revertido: #{summary(result)} saíram.")
+        when :invalid then Interface::ViewMessage.text("Informe quantos minutos: `/reverter 30`.")
+        when :applied then Interface::ViewMessage.text("Removido: #{summary(result)}.")
         else preview(result)
         end
       end
 
       def wipe(result)
-        return Interface::ViewMessage.text("Tudo apagado. Manda qualquer coisa pra começar de novo.") if result.status == :wiped
+        return Interface::ViewMessage.text("Dados apagados. Envie qualquer mensagem para iniciar uma nova configuração.") if result.status == :wiped
 
-        Interface::ViewMessage.text("Nada apagado.")
+        Interface::ViewMessage.text("Nenhum dado foi apagado.")
       end
 
       def confirm_wipe
         Interface::ViewMessage.new(
-          text: "Isso apaga *tudo*: gastos, parcelamentos, categorias, custos fixos, assinaturas e metas.\n" \
-                "Não dá pra desfazer depois.",
-          keyboard: [[["Apagar tudo", "wipe:yes"], ["Deixa quieto", "wipe:no"]]]
+          text: "Isso apaga *todos* os seus dados: gastos, parcelamentos, categorias, custos fixos, assinaturas e metas.\n" \
+                "A ação não pode ser desfeita.",
+          keyboard: [[["Apagar tudo", "wipe:yes"], ["Cancelar", "wipe:no"]]]
         )
       end
 
       private
 
       def preview(result)
-        return Interface::ViewMessage.text("Nada lançado nos últimos #{result.minutes} min.") if result.empty?
+        return Interface::ViewMessage.text("Nenhum lançamento nos últimos #{result.minutes} minutos.") if result.empty?
 
-        lines = ["*Vou desfazer isto* (últimos #{result.minutes} min):", ""]
+        lines = ["*Serão removidos* (últimos #{result.minutes} min):", ""]
         lines += result.expenses.first(LIMIT).map { |item| expense_line(item) }
         lines += result.plans.first(LIMIT).map { |item| plan_line(item) }
         lines << "_...e mais #{result.total - (LIMIT * 2)}._" if result.total > LIMIT * 2
@@ -40,7 +40,7 @@ module Features
 
         Interface::ViewMessage.new(
           text: lines.join("\n"),
-          keyboard: [[["Desfazer", "rollback:#{result.since.to_i}"], ["Deixa quieto", "wipe:no"]]]
+          keyboard: [[["Desfazer", "rollback:#{result.since.to_i}"], ["Cancelar", "wipe:no"]]]
         )
       end
 

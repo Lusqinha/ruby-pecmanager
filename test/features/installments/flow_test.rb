@@ -38,7 +38,7 @@ class InstallmentFlowTest < SliceCase
     plan = @factory.installment_plans.find(3, 1)
 
     assert plan.cancelled?
-    assert_includes reply.text, "Encerrado"
+    assert_includes reply.text, "Parcelamento encerrado"
     assert_nil plan.due_in(TODAY.next_month)
     assert_equal 100_00, plan.due_in(TODAY).cents
   end

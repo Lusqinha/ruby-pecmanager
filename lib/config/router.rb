@@ -4,7 +4,7 @@ module Config
   # Walks the slices in order and takes the first answer. Knows no commands:
   # every route lives in the slice that implements it.
   class Router
-    UNKNOWN_BUTTON = "Botão desconhecido."
+    UNKNOWN_BUTTON = "Este botão não é mais válido."
 
     def initialize(handlers:)
       @handlers = handlers
