@@ -18,6 +18,13 @@ module Features
     end
     CategoryEntry = Struct.new(:date, :amount, :description, keyword_init: true)
 
+    WeeklyReport = Struct.new(:from, :to, :spent, :days_left, :lines, keyword_init: true)
+    WeeklyLine = Struct.new(:category_name, :week, :spent, :limit, :left, :days_left, keyword_init: true) do
+      # Quanto dá pra gastar por dia com o que sobrou até o fim do mês.
+      def per_day = days_left.positive? ? Domain::Money.new(left.cents / days_left) : left
+      def over? = left.zero?
+    end
+
     HistoryReport = Struct.new(:months, keyword_init: true)
     HistoryLine = Struct.new(:month, :total, keyword_init: true)
 

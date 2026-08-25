@@ -151,6 +151,14 @@ module InMemory
     def delete(user_id) = rows.delete(user_id)
   end
 
+  class DeliveryRepository < Base
+    def last_sent_on(user_id, kind) = rows[[user_id, kind.to_s]]
+
+    def record(user_id, kind, date)
+      rows[[user_id, kind.to_s]] = date
+    end
+  end
+
   class PendingImportRepository < Base
     def find(user_id) = rows[user_id]
 
@@ -203,7 +211,7 @@ module InMemory
   # same router, no database.
   class Factory
     attr_reader :users, :categories, :expenses, :fixed_costs, :subscriptions, :goals, :drafts,
-                :installment_plans, :pending_imports, :clock
+                :installment_plans, :pending_imports, :deliveries, :clock
     attr_accessor :parser
 
     def initialize(clock:, parser:)
@@ -218,6 +226,7 @@ module InMemory
       @drafts = DraftRepository.new
       @installment_plans = InstallmentPlanRepository.new
       @pending_imports = PendingImportRepository.new
+      @deliveries = DeliveryRepository.new
     end
 
     def router
@@ -319,6 +328,22 @@ module InMemory
       )
     end
 
+    # Sexta, 16h: fechamento da semana entregue sem ninguém pedir.
+    def weekly_digest
+      Features::Reports::WeeklyDigest.new(
+        weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler,
+                                                  expense_repository: expenses, clock: clock),
+        presenter: Features::Reports::Presenter.new,
+        advice: weekly_advice,
+        delivery_repository: deliveries,
+        schedule: Infrastructure::Schedule.new(weekday: 5, hour: 16)
+      )
+    end
+
+    def weekly_advice
+      Features::Reports::WeeklyAdvice.new(advisor: ParserProxy.new(self))
+    end
+
     def reports_handler
 
       Features::Reports::Handler.new(
@@ -327,6 +352,8 @@ module InMemory
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: clock),
         projection: view_projection,
         history: Features::Reports::ViewHistory.new(expense_repository: expenses, clock: clock),
+        weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: clock),
+        advice: weekly_advice,
         presenter: Features::Reports::Presenter.new
       )
     end
