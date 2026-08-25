@@ -65,7 +65,7 @@ module Features
       def deductions_prompt(draft)
         if draft.pj?
           "*Passo 3/8 — Descontos da receita*\nUm por linha, e o percentual sai da receita:\n" \
-            "`imposto 6%`\n`inss 178,31`\n`contadora 250`\nNão tem? *pronto*."
+            "`imposto 6%`\n`inss 178,31`\n`contabilidade 250`\nNão tem? *pronto*."
         else
           "*Passo 3/8 — Descontos*\nSe quiser acompanhar o que sai antes de cair na conta, " \
             "um por linha: `inss 400`, `plano de saúde 180`, `vale 8%`.\nNão quer? *pronto*."

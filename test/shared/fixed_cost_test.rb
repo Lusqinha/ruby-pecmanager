@@ -6,7 +6,7 @@ class FixedCostTest < Minitest::Test
   def money(cents) = Domain::Money.new(cents)
 
   def test_a_fixed_deduction_is_its_own_amount
-    item = Domain::FixedCost.new(name: "Contadora", amount: money(25_000), deduction: true)
+    item = Domain::FixedCost.new(name: "Contabilidade", amount: money(25_000), deduction: true)
 
     assert_equal 25_000, item.monthly_amount(money(420_000)).cents
     assert item.deduction?

@@ -2,7 +2,7 @@
 
 module Domain
   # Renda que de fato circula: bruto menos o que sai antes (imposto, INSS,
-  # contadora). Vive aqui porque tanto o plano quanto os lançamentos precisam
+  # contabilidade). Vive aqui porque tanto o plano quanto os lançamentos precisam
   # dela, e nenhum dos dois pode ficar com uma cópia da regra.
   module NetIncome
     module_function

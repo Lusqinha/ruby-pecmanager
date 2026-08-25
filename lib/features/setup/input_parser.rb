@@ -64,7 +64,7 @@ module Features
         entities.empty? ? Features::Setup::Input::Unknown.new(text) : Features::Setup::Input::Items.new(entities)
       end
 
-      # "imposto 6% dedução" e "contadora 250 dedução" saem da renda antes de
+      # "imposto 6% dedução" e "contabilidade 250 dedução" saem da renda antes de
       # tudo; "aluguel 900 dia 10" é custo de vida como sempre foi.
       # No passo de descontos tudo é dedução; no de custos fixos, só o que traz
       # a palavra.

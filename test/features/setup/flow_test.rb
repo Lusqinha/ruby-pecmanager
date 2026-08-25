@@ -26,7 +26,7 @@ class SetupFlowTest < SliceCase
     send_text("oi")
     tap_button("pj")
     send_text("4200")
-    send_text("imposto 6%\ninss 178,31\ncontadora 250")
+    send_text("imposto 6%\ninss 178,31\ncontabilidade 250")
 
     draft = @factory.drafts.find(3)[:draft]
     imposto = draft.deductions.find { |item| item.name.casecmp?("imposto") }
@@ -55,7 +55,7 @@ class SetupFlowTest < SliceCase
     send_text("pronto", user_id: 9)
     tap_button("preset", user_id: 9)
     Features::Setup::Presets.size.times { send_text("10%", user_id: 9) }
-    send_text("imposto 6% dedução\ncontadora 250 dedução\naluguel 900 dia 10", user_id: 9)
+    send_text("imposto 6% dedução\ncontabilidade 250 dedução\naluguel 900 dia 10", user_id: 9)
     send_text("pronto", user_id: 9)
     send_text("pronto", user_id: 9)
     send_text("pronto", user_id: 9)
@@ -66,7 +66,7 @@ class SetupFlowTest < SliceCase
     assert costs["imposto"].percent?
     assert costs["imposto"].deduction?
     assert_equal 600, costs["imposto"].amount.cents
-    assert costs["contadora"].deduction?
+    assert costs["contabilidade"].deduction?
     refute costs["aluguel"].deduction?
     assert_equal 10, costs["aluguel"].due_day
   end
