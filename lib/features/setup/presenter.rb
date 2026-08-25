@@ -37,7 +37,8 @@ module Features
         when :budgets then budget_prompt(state.draft)
         when :fixed_costs then "*Passo 6/8 — Custos fixos*\nO que sai todo mês da sua conta, um por linha: `aluguel 1200 dia 10`. Se não houver, envie *pronto*."
         when :subscriptions then "*Passo 7/8 — Assinaturas*\nUma por linha: `netflix 39,90 dia 5` ou `dominio 60 anual`. Se não houver, envie *pronto*."
-        when :goals then "*Passo 8/8 — Metas de reserva*\nUma por linha: `reserva 10000 até 12/2027`. Se não houver, envie *pronto*."
+        when :goals then "*Passo 8/8 — Caixinhas*\nOnde você separa dinheiro, uma por linha: " \
+                         "`reserva 10000 até 12/2027` ou `viagem 3000`. Se não houver, envie *pronto*."
         when :confirm then summary(state)
         else ERRORS[:unknown_step]
         end
@@ -101,8 +102,8 @@ module Features
         lines += section("Descontos", draft.deductions) { |item| "· #{item.name}: #{cost_label(item, draft)}" }
         lines += section("Custos fixos", draft.fixed_costs) { |item| "· #{item.name}: #{Interface::Brl.format(item.amount)}#{due(item)}" }
         lines += section("Assinaturas", draft.subscriptions) { |item| "· #{item.name}: #{Interface::Brl.format(item.amount)}#{item.yearly? ? '/ano' : '/mês'}" }
-        lines += section("Metas", draft.goals) { |item| "· #{item.name}: #{Interface::Brl.format(item.target)}#{item.deadline ? " até #{item.deadline.strftime('%m/%Y')}" : ''}" }
-        lines += ["", "Sobra depois de fixos, assinaturas e metas: *#{Interface::Brl.format(summary.available)}*",
+        lines += section("Caixinhas", draft.goals) { |item| "· #{item.name}: #{Interface::Brl.format(item.target)}#{item.deadline ? " até #{item.deadline.strftime('%m/%Y')}" : ''}" }
+        lines += ["", "Sobra depois de fixos, assinaturas e caixinhas: *#{Interface::Brl.format(summary.available)}*",
                   "Soma dos budgets: *#{Interface::Brl.format(summary.committed)}*"]
         lines << "⚠️ Os budgets estouram em *#{Interface::Brl.format(summary.over)}*. Dá pra confirmar assim mesmo e ajustar depois." if summary.over?
         lines << "\nConfirmar?"

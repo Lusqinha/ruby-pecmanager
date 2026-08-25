@@ -21,7 +21,7 @@ module Features
         lines += report.lines.map { |line| category_line(line.category_name, line.spent, line.limit) }
         lines << "· sem categoria: #{Interface::Brl.format(report.uncategorized)}" if report.uncategorized.positive?
         lines += installment_block(report)
-        lines += ["", "Fixos #{Interface::Brl.format(summary.fixed_costs)} · assinaturas #{Interface::Brl.format(summary.subscriptions)} · metas #{Interface::Brl.format(summary.goals)}",
+        lines += ["", "Fixos #{Interface::Brl.format(summary.fixed_costs)} · assinaturas #{Interface::Brl.format(summary.subscriptions)} · caixinhas #{Interface::Brl.format(summary.goals)}",
                   "Sobra do mês: *#{Interface::Brl.format(summary.available - report.total - report.installments_total)}*"]
         Interface::ViewMessage.text(lines.join("\n"))
       end
@@ -48,12 +48,6 @@ module Features
         lines += ["", *report.goals.map { |goal| goal_forecast(goal) }] unless report.goals.empty?
 
         Interface::ViewMessage.text(lines.join("\n"))
-      end
-
-      def goals(report)
-        return Interface::ViewMessage.text("Nenhuma meta cadastrada.") if report.items.empty?
-
-        Interface::ViewMessage.text(report.items.map { |item| goal_line(item) }.join("\n"))
       end
 
       private
