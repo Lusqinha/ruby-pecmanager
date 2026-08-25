@@ -14,6 +14,8 @@ module Features
       end
 
       def monthly(report)
+        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+
         summary = report.summary
         lines = ["*#{report.month.strftime('%m/%Y')}* — gasto #{Interface::Brl.format(report.total)} de #{Interface::Brl.format(summary.committed)} em budgets", ""]
         lines += report.lines.map { |line| category_line(line.category_name, line.spent, line.limit) }
@@ -25,6 +27,8 @@ module Features
       end
 
       def category(report)
+        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+
         unless report.found?
           return Interface::ViewMessage.text("Não achei essa categoria. Suas: #{report.available_names.join(', ')}")
         end

@@ -28,7 +28,7 @@ module Features
       private
 
       def build_lines(plan, plans)
-        budgets = total(plan.categories) { |category| category.budget_for(plan.salary) }
+        budgets = total(plan.categories) { |category| category.budget_for(plan.net_income) }
         fixed = plan.living_costs + total(plan.subscriptions, &:monthly_amount)
         accumulated = Domain::Money.zero
 

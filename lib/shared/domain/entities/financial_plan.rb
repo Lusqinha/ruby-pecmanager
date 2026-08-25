@@ -15,7 +15,7 @@ module Domain
 
     def deductions = sum(fixed_costs.select(&:deduction?)) { |item| item.monthly_amount(salary) }
     def living_costs = sum(fixed_costs.reject(&:deduction?)) { |item| item.monthly_amount(salary) }
-    def net_income = salary - deductions
+    def net_income = NetIncome.of(salary, fixed_costs)
 
     def summary(today)
       BudgetSummary.new(
@@ -23,7 +23,7 @@ module Domain
         fixed_costs: living_costs,
         subscriptions: sum(subscriptions, &:monthly_amount),
         goals: sum(goals) { |goal| goal.monthly_contribution(today) },
-        committed: sum(categories) { |category| category.budget_for(salary) }
+        committed: sum(categories) { |category| category.budget_for(net_income) }
       )
     end
 

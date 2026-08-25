@@ -222,10 +222,12 @@ module InMemory
       Features::Expense::Handler.new(
         record_expense: Features::Expense::RecordExpense.new(
           user_repository: users, category_repository: categories,
-          expense_repository: expenses, parser: ParserProxy.new(self), clock: clock
+          expense_repository: expenses, fixed_cost_repository: fixed_costs,
+          parser: ParserProxy.new(self), clock: clock
         ),
         assign_category: Features::Expense::AssignCategory.new(
-          user_repository: users, category_repository: categories, expense_repository: expenses
+          user_repository: users, category_repository: categories, expense_repository: expenses,
+          fixed_cost_repository: fixed_costs
         ),
         prepare_category_change: Features::Expense::PrepareCategoryChange.new(
           category_repository: categories, expense_repository: expenses

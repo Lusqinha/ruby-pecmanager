@@ -182,4 +182,17 @@ class ExpenseFlowTest < SliceCase
     assert_includes reply.text, "Nada pra desfazer"
     assert_equal 1, @factory.expenses.rows.size
   end
+  # 20% de 5.000 seria 1.000; com 6% de dedução o líquido é 4.700 e o teto cai
+  # pra 940. É o número que o usuário vê ao lançar.
+  def test_a_percentage_budget_comes_out_of_the_net_income
+    @factory.seed_user
+    @factory.categories.replace_all(3, [Domain::Category.new(name: "Mercado", keywords: %w[mercado],
+                                                             limit: Domain::BudgetLimit.percent(20))])
+    @factory.fixed_costs.replace_all(3, [Domain::FixedCost.new(name: "Imposto", amount: Domain::Money.new(600),
+                                                               kind: "pct", deduction: true)])
+
+    reply = send_text("40 mercado")
+
+    assert_includes reply.text, "R$ 940,00"
+  end
 end

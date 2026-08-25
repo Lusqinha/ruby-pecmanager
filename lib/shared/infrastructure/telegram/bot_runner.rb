@@ -45,8 +45,10 @@ module Infrastructure
       def handle_callback(bot, query)
         return unless allowed?(query.from.id)
 
-        reply = @controller.handle_callback(query.from.id, query.data)
+        # Antes de despachar: o handler pode levar segundos no LLM, e se levantar
+        # erro o botão ficaria girando até o Telegram desistir.
         bot.api.answer_callback_query(callback_query_id: query.id)
+        reply = @controller.handle_callback(query.from.id, query.data)
         send_reply(bot, query.message.chat.id, reply)
       end
 

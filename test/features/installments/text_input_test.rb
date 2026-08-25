@@ -40,4 +40,23 @@ class InstallmentTextInputTest < Minitest::Test
     refute Input.match?("50 xis salada")
     assert Input.match?("1200 em 12x notebook")
   end
+  # "marmita" começa com "mar", "outros" com "out": mês só vale se a palavra
+  # terminar ali ou for o nome por extenso.
+  def test_a_word_that_starts_like_a_month_is_not_a_month
+    result = parse("120 em marmita 4x")
+
+    assert_equal Date.new(2026, 8, 1), result[:first_month]
+    assert_equal "marmita", result[:description]
+    assert_equal Date.new(2026, 8, 1), parse("3x de 50 em outros")[:first_month]
+  end
+
+  def test_accepts_the_month_written_in_full
+    assert_equal Date.new(2026, 10, 1), parse("550 em 1x cnpj a partir de outubro")[:first_month]
+    assert_equal Date.new(2027, 3, 1), parse("300 em 3x curso a partir de março")[:first_month]
+  end
+
+  def test_an_impossible_month_is_not_a_crash
+    assert_nil parse("3x de 100 a partir de 13/2026")
+    assert_nil parse("1200 em 12x a partir de 00/2027")
+  end
 end

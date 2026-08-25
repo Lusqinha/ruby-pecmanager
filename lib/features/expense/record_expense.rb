@@ -4,7 +4,9 @@ module Features
   module Expense
     class RecordExpense
       def initialize(user_repository:, category_repository:, expense_repository:, parser:, clock:,
+                     fixed_cost_repository:,
                      deterministic_parser: Infrastructure::Parsing::RegexExpenseParser.new)
+        @fixed_cost_repository = fixed_cost_repository
         @user_repository = user_repository
         @category_repository = category_repository
         @expense_repository = expense_repository
@@ -22,7 +24,8 @@ module Features
 
         return Result.new(status: :needs_category, expense: expense, categories: categories) unless category
 
-        Support.recorded(expense, category, @expense_repository, @user_repository.find(user_id))
+        user = @user_repository.find(user_id)
+        Support.recorded(expense, category, @expense_repository, user, Support.net_income(user, @fixed_cost_repository))
       end
 
       private
@@ -63,12 +66,16 @@ module Features
     module Support
       module_function
 
-      def recorded(expense, category, expense_repository, user)
+      def net_income(user, fixed_cost_repository)
+        Domain::NetIncome.of(user.salary, fixed_cost_repository.for_user(user.id))
+      end
+
+      def recorded(expense, category, expense_repository, user, net_income)
         spent = expense_repository.for_category(user.id, category.id, Domain::Month.range(expense.spent_on))
                                   .reduce(Domain::Money.zero) { |total, item| total + item.amount }
 
         Result.new(status: :recorded, expense: expense, category: category,
-                   spent_in_month: spent, limit: category.budget_for(user.salary))
+                   spent_in_month: spent, limit: category.budget_for(net_income))
       end
     end
   end

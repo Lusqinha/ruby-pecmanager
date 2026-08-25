@@ -43,7 +43,7 @@ module Features
         lines = plan.categories.map do |category|
           MonthlyLine.new(category_name: category.name,
                                spent: totals[category.id] || Domain::Money.zero,
-                               limit: category.budget_for(plan.salary))
+                               limit: category.budget_for(plan.net_income))
         end.sort_by { |line| -line.spent.cents }
 
         MonthlyReport.new(
@@ -89,7 +89,7 @@ module Features
         CategoryReport.new(
           status: :found, category_name: category.name, month: today,
           spent: expenses.reduce(Domain::Money.zero) { |total, expense| total + expense.amount },
-          limit: category.budget_for(plan.salary),
+          limit: category.budget_for(plan.net_income),
           entries: expenses.sort_by { |expense| [-expense.spent_on.jd, -expense.id.to_i] }.first(LIMIT).map do |expense|
             CategoryEntry.new(date: expense.spent_on, amount: expense.amount, description: expense.description)
           end

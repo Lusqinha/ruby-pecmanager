@@ -3,10 +3,11 @@
 module Features
   module Expense
     class AssignCategory
-      def initialize(user_repository:, category_repository:, expense_repository:)
+      def initialize(user_repository:, category_repository:, expense_repository:, fixed_cost_repository:)
         @user_repository = user_repository
         @category_repository = category_repository
         @expense_repository = expense_repository
+        @fixed_cost_repository = fixed_cost_repository
       end
 
       def call(user_id:, expense_id:, category_id:)
@@ -19,7 +20,8 @@ module Features
         # with no LLM round trip.
         category = @category_repository.save(category.with_keyword(expense.first_word))
 
-        Support.recorded(expense, category, @expense_repository, @user_repository.find(user_id))
+        user = @user_repository.find(user_id)
+        Support.recorded(expense, category, @expense_repository, user, Support.net_income(user, @fixed_cost_repository))
       end
     end
 

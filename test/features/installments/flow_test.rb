@@ -48,4 +48,14 @@ class InstallmentFlowTest < SliceCase
     assert_equal 1, @factory.expenses.rows.size
     assert_empty @factory.installment_plans.for_user(3)
   end
+  # Plano que ainda não começou perde todas as parcelas, não zero.
+  def test_cancelling_a_plan_that_has_not_started_reports_every_instalment
+    @factory.seed_user
+    send_text("1200 em 12x uber mensal a partir de #{(TODAY >> 2).strftime('%m/%Y')}")
+
+    reply = tap_button("plan:cancel:1")
+
+    assert_includes reply.text, "12 parcela"
+    assert_nil @factory.installment_plans.find(3, 1).due_in(TODAY >> 2)
+  end
 end

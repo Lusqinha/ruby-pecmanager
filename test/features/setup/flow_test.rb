@@ -152,4 +152,14 @@ class SetupFlowTest < SliceCase
     refute_includes names, "Educação"
     assert_equal 600_000, @factory.users.find(7).salary.cents
   end
+  # Botão de uma tela anterior não pode virar resposta do passo aberto.
+  def test_a_stale_button_is_not_read_as_an_answer
+    send_text("oi")
+    tap_button("clt")
+
+    reply = tap_button("undo:1200")
+
+    assert_includes reply.text, "Passo 2/8"
+    assert_nil @factory.drafts.find(3)[:draft].salary
+  end
 end

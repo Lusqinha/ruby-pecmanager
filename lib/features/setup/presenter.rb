@@ -101,7 +101,7 @@ module Features
         lines += section("Descontos", draft.deductions) { |item| "· #{item.name}: #{cost_label(item, draft)}" }
         lines += section("Custos fixos", draft.fixed_costs) { |item| "· #{item.name}: #{Interface::Brl.format(item.amount)}#{due(item)}" }
         lines += section("Assinaturas", draft.subscriptions) { |item| "· #{item.name}: #{Interface::Brl.format(item.amount)}#{item.yearly? ? '/ano' : '/mês'}" }
-        lines += section("Metas", draft.goals) { |item| "· #{item.name}: #{Interface::Brl.format(item.target)}#{item.deadline ? " até #{item.deadline}" : ''}" }
+        lines += section("Metas", draft.goals) { |item| "· #{item.name}: #{Interface::Brl.format(item.target)}#{item.deadline ? " até #{item.deadline.strftime('%m/%Y')}" : ''}" }
         lines += ["", "Sobra depois de fixos, assinaturas e metas: *#{Interface::Brl.format(summary.available)}*",
                   "Soma dos budgets: *#{Interface::Brl.format(summary.committed)}*"]
         lines << "⚠️ Os budgets estouram em *#{Interface::Brl.format(summary.over)}*. Dá pra confirmar assim mesmo e ajustar depois." if summary.over?
