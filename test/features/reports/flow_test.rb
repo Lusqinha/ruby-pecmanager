@@ -79,7 +79,7 @@ class ReportsFlowTest < SliceCase
 
     assert reply.photo?
     assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
-    assert_includes reply.text, "1. Mercado: R$ 35,00 de R$ 500,00"
+    assert_includes reply.text, "1. Mercado: resta R$ 465,00 de R$ 500,00"
   end
 
   def test_a_month_without_movement_answers_in_text
@@ -88,6 +88,27 @@ class ReportsFlowTest < SliceCase
     reply = send_text("/grafico")
 
     refute reply.photo?
-    assert_includes reply.text, "Nenhum lançamento"
+    assert_includes reply.text, "Nenhuma categoria com limite"
+  end
+  def test_the_monthly_history_plots_one_column_per_month
+    @factory.seed_user
+    send_text("35 mercado")
+
+    reply = send_text("/grafico_meses")
+
+    assert reply.photo?
+    assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
+    assert_includes reply.text, "08/2026: R$ 35,00"
+    # Seis meses na legenda, do mais antigo ao atual
+    assert_includes reply.text, "03/2026: R$ 0,00"
+  end
+
+  def test_the_history_answers_in_text_when_there_is_nothing_yet
+    @factory.seed_user
+
+    reply = send_text("/grafico_meses")
+
+    refute reply.photo?
+    assert_includes reply.text, "Nenhum gasto registrado"
   end
 end

@@ -79,6 +79,29 @@ module Features
       end
     end
 
+    # Total gasto em cada um dos últimos meses, do mais antigo para o atual.
+    class ViewHistory
+      MONTHS = 6
+
+      def initialize(expense_repository:, clock:)
+        @expense_repository = expense_repository
+        @clock = clock
+      end
+
+      def call(user_id:, months: MONTHS)
+        first = Domain::Month.advance(@clock.today, -(months - 1))
+
+        lines = (0...months).map do |index|
+          month = Domain::Month.advance(first, index)
+          expenses = @expense_repository.for_period(user_id, Domain::Month.range(month))
+          HistoryLine.new(month: month,
+                          total: expenses.reduce(Domain::Money.zero) { |sum, item| sum + item.amount })
+        end
+
+        HistoryReport.new(months: lines)
+      end
+    end
+
     class ViewCategory
       LIMIT = 10
 
