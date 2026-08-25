@@ -84,7 +84,7 @@ class SavingsFlowTest < SliceCase
                                ])
     send_text("/caixinha reserva 1500")
 
-    reply = send_text("/grafico_caixinhas")
+    reply = tap_button("chart:boxes")
 
     assert reply.photo?
     assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
@@ -97,7 +97,7 @@ class SavingsFlowTest < SliceCase
     @factory.seed_user
     @factory.goals.replace_all(3, [Domain::Goal.new(name: "Solta", target: Domain::Money.zero)])
 
-    reply = send_text("/grafico_caixinhas")
+    reply = tap_button("chart:boxes")
 
     refute reply.photo?
     assert_includes reply.text, "Nenhuma caixinha com valor"

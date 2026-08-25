@@ -6,7 +6,7 @@ module Features
       # "/caixinha viagem 200" guarda; com valor negativo, retira.
       route(%r{\A/caixinha\s+(.+?)(?:\s+(-?[\d.,]+))?\s*\z}i, to: :deposit)
       route "/caixinhas", to: :list
-      route "/grafico_caixinhas", to: :chart
+      callback("chart:boxes", to: :chart)
       route "/metas", to: :list
 
       def initialize(deposit:, view_boxes:, presenter:)
@@ -20,7 +20,7 @@ module Features
       end
 
       def list(request) = @presenter.call(@view_boxes.call(user_id: request.user_id))
-      def chart(request) = @presenter.chart(@view_boxes.call(user_id: request.user_id))
+      def chart(request, *) = @presenter.chart(@view_boxes.call(user_id: request.user_id))
 
       private
 

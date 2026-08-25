@@ -75,7 +75,7 @@ class ReportsFlowTest < SliceCase
     @factory.seed_user
     send_text("35 mercado")
 
-    reply = send_text("/grafico")
+    reply = tap_button("chart:categories")
 
     assert reply.photo?
     assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
@@ -85,7 +85,7 @@ class ReportsFlowTest < SliceCase
   def test_a_month_without_movement_answers_in_text
     @factory.seed_user(categories: [])
 
-    reply = send_text("/grafico")
+    reply = tap_button("chart:categories")
 
     refute reply.photo?
     assert_includes reply.text, "Nenhuma categoria com limite"
@@ -94,7 +94,7 @@ class ReportsFlowTest < SliceCase
     @factory.seed_user
     send_text("35 mercado")
 
-    reply = send_text("/grafico_meses")
+    reply = tap_button("chart:months")
 
     assert reply.photo?
     assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
@@ -106,9 +106,18 @@ class ReportsFlowTest < SliceCase
   def test_the_history_answers_in_text_when_there_is_nothing_yet
     @factory.seed_user
 
-    reply = send_text("/grafico_meses")
+    reply = tap_button("chart:months")
 
     refute reply.photo?
     assert_includes reply.text, "Nenhum gasto registrado"
+  end
+
+  def test_the_chart_command_offers_the_three_options
+    @factory.seed_user
+
+    reply = send_text("/grafico")
+
+    assert_equal [["Categorias", "chart:categories"], ["Gastos mês a mês", "chart:months"],
+                  ["Caixinhas", "chart:boxes"]], reply.keyboard.flatten(1)
   end
 end
