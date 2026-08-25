@@ -90,4 +90,5 @@ chore: ajusta gitignore
 ```
 
 O escopo é o slice (`setup`, `expense`, `installments`, `reports`, `imports`,
-`account`) ou vazio, quando a mudança é transversal.
+`account`, `budgets`, `savings`, `export`) ou vazio, quando a mudança é
+transversal.

@@ -53,6 +53,27 @@ class FinancialPlanTest < Minitest::Test
     assert_equal 346_000, summary.available.cents
   end
 
+  def test_subscriptions_with_their_own_category_are_not_charged_twice
+    plan = plan(categories: [Domain::Category.new(name: "Assinaturas", limit: Domain::BudgetLimit.fixed(money(20_000)))],
+                subscriptions: [Domain::Subscription.new(name: "netflix", amount: money(4_000))])
+    summary = plan.summary(TODAY)
+
+    assert summary.subscriptions_in_budget?
+    assert_equal 4_000, summary.subscriptions.cents
+    assert_equal 500_000, summary.available.cents
+    assert_equal 480_000, summary.free.cents
+  end
+
+  def test_a_subscription_counts_as_spending_in_its_category
+    subscription = Domain::Subscription.new(name: "netflix", amount: money(4_000))
+    subscriptions_category = Domain::Category.new(id: 1, name: "Assinaturas")
+    other = Domain::Category.new(id: 2, name: "Mercado")
+    plan = plan(categories: [subscriptions_category, other], subscriptions: [subscription])
+
+    assert_equal 5_000, plan.spent_for(subscriptions_category, { 1 => money(1_000) }).cents
+    assert_equal 1_000, plan.spent_for(other, { 2 => money(1_000) }).cents
+  end
+
   def test_flags_budgets_that_exceed_what_is_left
     summary = plan(
       categories: Array.new(7) { category(Domain::BudgetLimit.percent(20)) },

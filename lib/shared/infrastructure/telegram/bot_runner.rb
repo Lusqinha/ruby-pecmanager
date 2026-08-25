@@ -144,9 +144,25 @@ module Infrastructure
         bot.api.send_message(chat_id: chat_id, text: reply.text)
       end
 
+      # Mesma ideia do PNG: a gem quer um arquivo, e o nome que o usuário baixa
+      # é o do ViewMessage, não o do temporário.
+      def send_document(bot, chat_id, reply)
+        Tempfile.create(["export", File.extname(reply.filename)]) do |file|
+          file.write(reply.document)
+          file.flush
+          bot.api.send_document(chat_id: chat_id,
+                                document: Faraday::Multipart::FilePart.new(file.path, "text/plain", reply.filename),
+                                caption: reply.text)
+        end
+      rescue StandardError => e
+        @logger&.error("Falha ao enviar arquivo: #{e.class}: #{safe(e.message)}")
+        bot.api.send_message(chat_id: chat_id, text: "Não consegui enviar o arquivo.")
+      end
+
       def send_reply(bot, chat_id, reply)
         return if reply.nil?
         return send_photo(bot, chat_id, reply) if reply.photo?
+        return send_document(bot, chat_id, reply) if reply.document?
         return if reply.text.to_s.empty?
 
         markup = markup_for(reply.keyboard)

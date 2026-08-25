@@ -6,7 +6,7 @@ require_relative "../test_helper"
 # one slice reaches into another, or shared reaches into a slice.
 class ArchitectureTest < Minitest::Test
   ROOT = File.expand_path("../../lib", __dir__)
-  SLICES = %w[setup expense reports help].freeze
+  SLICES = %w[setup expense reports help budgets export savings].freeze
 
   def test_slices_do_not_reach_into_each_other
     violations = SLICES.flat_map do |slice|
