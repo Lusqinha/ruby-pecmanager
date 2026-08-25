@@ -28,6 +28,35 @@ module Features
 
       # O botão das caixinhas é atendido pelo slice de caixinhas: aqui só o
       # rótulo e o dado do callback.
+      def weekly(report)
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
+
+        header = "*Semana de #{report.from.strftime('%d/%m')} a #{report.to.strftime('%d/%m')}*"
+        lines = [header, week_total(report), ""]
+        lines << "Restam *#{report.days_left} dias* no mês:"
+        lines += report.lines.map { |line| weekly_line(line) }
+
+        Interface::ViewMessage.text(lines.join("\n"))
+      end
+
+      private
+
+      def week_total(report)
+        return "Nenhum gasto lançado nesta semana." if report.spent.zero?
+
+        "Gasto na semana: #{Interface::Brl.format(report.spent)}"
+      end
+
+      def weekly_line(line)
+        week = line.week.positive? ? " (#{Interface::Brl.format(line.week)} nesta semana)" : ""
+        return "· *#{line.category_name}*: budget estourado#{week}" if line.over?
+
+        "· *#{line.category_name}*: restam #{Interface::Brl.format(line.left)} " \
+          "— #{Interface::Brl.format(line.per_day)}/dia#{week}"
+      end
+
+      public
+
       def chart_menu
         Interface::ViewMessage.new(
           text: "Qual gráfico?",

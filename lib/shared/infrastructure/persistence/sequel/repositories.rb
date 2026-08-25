@@ -79,6 +79,17 @@ module Infrastructure
         end
       end
 
+      class DeliveryRepository < Repository
+        def last_sent_on(user_id, kind) = db[:deliveries][user_id: user_id, kind: kind.to_s]&.fetch(:sent_on)
+
+        def record(user_id, kind, date)
+          row = { user_id: user_id, kind: kind.to_s, sent_on: date }
+          existing = db[:deliveries].where(user_id: user_id, kind: kind.to_s)
+          existing.any? ? existing.update(sent_on: date) : db[:deliveries].insert(row)
+          date
+        end
+      end
+
       class PendingImportRepository < Repository
         def find(user_id) = db[:pending_imports][user_id: user_id]&.fetch(:payload)
 
