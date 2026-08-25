@@ -26,6 +26,17 @@ module Features
         Interface::ViewMessage.text(lines.join("\n"))
       end
 
+      # O botão das caixinhas é atendido pelo slice de caixinhas: aqui só o
+      # rótulo e o dado do callback.
+      def chart_menu
+        Interface::ViewMessage.new(
+          text: "Qual gráfico?",
+          keyboard: [[["Categorias", "chart:categories"]],
+                     [["Gastos mês a mês", "chart:months"]],
+                     [["Caixinhas", "chart:boxes"]]]
+        )
+      end
+
       def chart(report)
         return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
