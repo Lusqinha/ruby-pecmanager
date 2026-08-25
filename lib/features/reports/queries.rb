@@ -110,21 +110,5 @@ module Features
       end
     end
 
-    class ViewGoals
-      def initialize(goal_repository:, clock:)
-        @goal_repository = goal_repository
-        @clock = clock
-      end
-
-      def call(user_id:)
-        today = @clock.today
-        items = @goal_repository.for_user(user_id).map do |goal|
-          GoalLine.new(name: goal.name, saved: goal.saved, target: goal.target,
-                            monthly: goal.monthly_contribution(today), deadline: goal.deadline)
-        end
-
-        GoalsReport.new(items: items)
-      end
-    end
   end
 end

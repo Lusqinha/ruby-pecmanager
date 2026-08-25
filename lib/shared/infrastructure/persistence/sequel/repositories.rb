@@ -204,6 +204,12 @@ module Infrastructure
       class GoalRepository < CollectionRepository
         def table = :goals
         def mapper = :goal
+
+        # Uma caixinha por vez: depósito não pode reescrever a lista inteira.
+        def save(goal)
+          db[:goals].where(id: goal.id, user_id: goal.user_id).update(Mappers.goal_row(goal, goal.user_id))
+          Mappers.goal(db[:goals][id: goal.id])
+        end
       end
 
       # Stored as JSON so an abandoned wizard never writes into the real tables.

@@ -114,6 +114,15 @@ module InMemory
   class CollectionRepository < Base
     def for_user(user_id) = rows.fetch(user_id, [])
 
+    def save(item)
+      list = rows.fetch(item.user_id, [])
+      index = list.index { |stored| stored.id == item.id }
+      return item unless index
+
+      list[index] = item
+      item
+    end
+
     def replace_all(user_id, items)
       rows[user_id] = items.each_with_index.map { |item, index| with_id(item, user_id, index + 1) }
     end
@@ -212,7 +221,7 @@ module InMemory
     end
 
     def router
-      Config::Router.new(handlers: [setup_handler, account_handler, reports_handler, help_handler,
+      Config::Router.new(handlers: [setup_handler, account_handler, savings_handler, reports_handler, help_handler,
                                     imports_handler, installments_handler, expense_handler])
     end
 
@@ -225,6 +234,14 @@ module InMemory
           input_parser: Features::Setup::InputParser.new, clock: clock
         ),
         presenter: Features::Setup::Presenter.new
+      )
+    end
+
+    def savings_handler
+      Features::Savings::Handler.new(
+        deposit: Features::Savings::Deposit.new(goal_repository: goals),
+        view_boxes: Features::Savings::ViewBoxes.new(goal_repository: goals, clock: clock),
+        presenter: Features::Savings::Presenter.new
       )
     end
 
@@ -308,7 +325,6 @@ module InMemory
         daily: Features::Reports::ViewDaily.new(expense_repository: expenses, category_repository: categories, clock: clock),
         monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: clock, user_repository: users),
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: clock),
-        goals: Features::Reports::ViewGoals.new(goal_repository: goals, clock: clock),
         projection: view_projection,
         presenter: Features::Reports::Presenter.new
       )

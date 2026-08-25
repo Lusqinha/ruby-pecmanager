@@ -12,7 +12,8 @@ Para parcelamento: `1200 em 12x notebook` ou `12x de 100 notebook`.
           /hoje — o que saiu hoje
           /mes — resumo do mês com budgets
           /categoria mercado — detalhe de uma categoria
-          /metas — progresso das reservas
+          /caixinhas — saldo de cada caixinha
+          /caixinha viagem 200 — guarda numa caixinha (valor negativo retira)
           /parcelas — parcelamentos em aberto
           /importar_parcelas — cadastrar parcelas do cartão por JSON
           /importar_gastos — lançar vários gastos por JSON

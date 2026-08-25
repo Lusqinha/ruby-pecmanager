@@ -23,7 +23,5 @@ module Features
                                 keyword_init: true)
     ProjectionGoal = Struct.new(:name, :target, :covered_on, keyword_init: true)
 
-    GoalsReport = Struct.new(:items, keyword_init: true)
-    GoalLine = Struct.new(:name, :saved, :target, :monthly, :deadline, keyword_init: true)
   end
 end
