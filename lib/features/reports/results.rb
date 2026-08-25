@@ -18,12 +18,13 @@ module Features
     end
     CategoryEntry = Struct.new(:date, :amount, :description, keyword_init: true)
 
+    HistoryReport = Struct.new(:months, keyword_init: true)
+    HistoryLine = Struct.new(:month, :total, keyword_init: true)
+
     ProjectionReport = Struct.new(:net_income, :lines, :goals, keyword_init: true)
     ProjectionLine = Struct.new(:month, :installments, :budgets, :fixed, :leftover, :accumulated,
                                 keyword_init: true)
     ProjectionGoal = Struct.new(:name, :target, :covered_on, keyword_init: true)
 
-    GoalsReport = Struct.new(:items, keyword_init: true)
-    GoalLine = Struct.new(:name, :saved, :target, :monthly, :deadline, keyword_init: true)
   end
 end

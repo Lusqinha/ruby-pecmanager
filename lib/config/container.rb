@@ -13,7 +13,7 @@ module Config
     # Order matters: setup intercepts while a wizard is open, and expense holds
     # the free-text fallback, so it answers last.
     def router
-      @router ||= Router.new(handlers: [setup_handler, account_handler, reports_handler, help_handler,
+      @router ||= Router.new(handlers: [setup_handler, account_handler, savings_handler, reports_handler, help_handler,
                                         imports_handler, installments_handler, expense_handler])
     end
 
@@ -45,6 +45,14 @@ module Config
         ),
         undo_expense: Features::Expense::UndoExpense.new(expense_repository: expenses, clock: @clock),
         presenter: Features::Expense::Presenter.new
+      )
+    end
+
+    def savings_handler
+      Features::Savings::Handler.new(
+        deposit: Features::Savings::Deposit.new(goal_repository: goals),
+        view_boxes: Features::Savings::ViewBoxes.new(goal_repository: goals, clock: @clock),
+        presenter: Features::Savings::Presenter.new
       )
     end
 
@@ -109,8 +117,8 @@ module Config
         daily: Features::Reports::ViewDaily.new(expense_repository: expenses, category_repository: categories, clock: @clock),
         monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: @clock, user_repository: users),
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: @clock),
-        goals: Features::Reports::ViewGoals.new(goal_repository: goals, clock: @clock),
         projection: view_projection,
+        history: Features::Reports::ViewHistory.new(expense_repository: expenses, clock: @clock),
         presenter: Features::Reports::Presenter.new
       )
     end

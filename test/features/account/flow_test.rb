@@ -52,7 +52,7 @@ class AccountFlowTest < SliceCase
   def test_an_empty_window_says_so
     @factory.seed_user
 
-    assert_includes send_text("/reverter 5").text, "Nada"
+    assert_includes send_text("/reverter 5").text, "Nenhum lançamento"
   end
 
   def test_refuses_a_window_without_a_number

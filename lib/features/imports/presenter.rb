@@ -4,18 +4,18 @@ module Features
   module Imports
     class Presenter
       ERRORS = {
-        invalid_json: "Isso não é um JSON válido. Confere se copiou o bloco inteiro, das chaves `{` até `}`.",
+        invalid_json: "JSON inválido. Verifique se copiou o bloco completo, de `{` até `}`.",
         empty: "O JSON veio sem lançamentos.",
-        invalid_item: "Tem linha faltando `data`, `descricao` ou `valor`, ou com valor zerado. " \
+        invalid_item: "Há linha sem `data`, `descricao` ou `valor`, ou com valor zerado. " \
                       "Data no formato `AAAA-MM-DD`.",
-        mixed: "Esse lote mistura gasto avulso com parcelamento. Separa em dois JSON: " \
-               "um pro /importar_gastos e outro pro /importar_parcelas."
+        mixed: "Este lote mistura gasto avulso com parcelamento. Separe em dois arquivos: " \
+               "um para /importar_gastos e outro para /importar_parcelas."
       }.freeze
 
       def instructions(kind, categories)
         Interface::ViewMessage.text(
           "#{header(kind)}\n\n" \
-          "Manda o JSON aqui no chat (ou o arquivo `.json`). Pra gerar, cola isto numa IA " \
+          "Envie o JSON no chat ou anexe o arquivo `.json`. Para gerar, use este prompt em uma IA, " \
           "junto com a fatura:\n\n```\n#{prompt(kind, categories)}\n```"
         )
       end
@@ -24,9 +24,9 @@ module Features
         case result.status
         when :prepared then prepared(result)
         when :recorded then recorded(result)
-        when :all_duplicated then Interface::ViewMessage.text("Tudo nesse lote já estava lançado. Nada a fazer.")
-        when :nothing_pending then Interface::ViewMessage.text("Não tem import esperando confirmação.")
-        when :discarded then Interface::ViewMessage.text("Import descartado.")
+        when :all_duplicated then Interface::ViewMessage.text("Todos os itens deste lote já estavam lançados.")
+        when :nothing_pending then Interface::ViewMessage.text("Nenhuma importação aguardando confirmação.")
+        when :discarded then Interface::ViewMessage.text("Importação descartada.")
         when :invalid then invalid(result)
         end
       end
@@ -47,19 +47,19 @@ module Features
       end
 
       def wrong_kind(kind)
-        return "Esse JSON é de parcelamento. Manda /importar_parcelas." if kind == :installments
+        return "Este JSON é de parcelamento. Use /importar_parcelas." if kind == :installments
 
-        "Esse JSON é de gasto avulso. Manda /importar_gastos."
+        "Este JSON é de gasto avulso. Use /importar_gastos."
       end
 
       def prepared(result)
-        lines = ["*Confere antes de gravar:*", ""]
+        lines = ["*Revise antes de gravar:*", ""]
         lines += result.items.first(15).map { |item| item_line(item) }
         lines << "_...e mais #{result.items.size - 15}._" if result.items.size > 15
         lines << ""
         lines << "#{result.items.size} #{result.kind == :installments ? 'parcelamento(s)' : 'gasto(s)'}" \
                  "#{duplicates(result)}."
-        lines += ["", "Essas parcelas devem consumir o budget das categorias?"] if result.kind == :installments
+        lines += ["", "Estas parcelas devem consumir o budget das categorias?"] if result.kind == :installments
 
         Interface::ViewMessage.new(text: lines.join("\n"), keyboard: buttons(result.kind))
       end
@@ -92,12 +92,12 @@ module Features
       def budget_note(result)
         return "" if result.in_budget.nil?
 
-        result.in_budget ? " Entram no budget das categorias." : " Ficam fora do budget, em bloco próprio."
+        result.in_budget ? " Passam a consumir o budget das categorias." : " Ficam fora do budget, em bloco próprio."
       end
 
       def pending(result)
         count = result.uncategorized.to_i
-        count.positive? ? " #{count} sem categoria — aparecem assim no /mes." : ""
+        count.positive? ? " #{count} sem categoria; aparecem assim no /mes." : ""
       end
 
       # As categorias e as keywords aprendidas vão no prompt: sem isso a IA

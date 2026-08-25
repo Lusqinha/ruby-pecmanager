@@ -34,8 +34,8 @@ class ReportsFlowTest < SliceCase
     send_text("35 mercado")
 
     assert_includes send_text("/categoria mercado").text, "R$ 35,00"
-    assert_includes send_text("/categoria nao existe").text, "Não achei"
-    assert_includes send_text("/categoria").text, "Não achei"
+    assert_includes send_text("/categoria nao existe").text, "Categoria não encontrada"
+    assert_includes send_text("/categoria").text, "Categoria não encontrada"
   end
 
   def test_goals_report_shows_the_monthly_pace
@@ -69,5 +69,55 @@ class ReportsFlowTest < SliceCase
 
     # 100,00 da parcela entram na linha de Transporte
     assert_includes reply.text, "Transporte: █░░░░░░░░░ R$ 100,00/R$ 1.000,00"
+  end
+
+  def test_the_chart_comes_back_as_a_png_with_a_legend
+    @factory.seed_user
+    send_text("35 mercado")
+
+    reply = tap_button("chart:categories")
+
+    assert reply.photo?
+    assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
+    assert_includes reply.text, "1. Mercado: resta R$ 465,00 de R$ 500,00"
+  end
+
+  def test_a_month_without_movement_answers_in_text
+    @factory.seed_user(categories: [])
+
+    reply = tap_button("chart:categories")
+
+    refute reply.photo?
+    assert_includes reply.text, "Nenhuma categoria com limite"
+  end
+  def test_the_monthly_history_plots_one_column_per_month
+    @factory.seed_user
+    send_text("35 mercado")
+
+    reply = tap_button("chart:months")
+
+    assert reply.photo?
+    assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
+    assert_includes reply.text, "08/2026: R$ 35,00"
+    # Seis meses na legenda, do mais antigo ao atual
+    assert_includes reply.text, "03/2026: R$ 0,00"
+  end
+
+  def test_the_history_answers_in_text_when_there_is_nothing_yet
+    @factory.seed_user
+
+    reply = tap_button("chart:months")
+
+    refute reply.photo?
+    assert_includes reply.text, "Nenhum gasto registrado"
+  end
+
+  def test_the_chart_command_offers_the_three_options
+    @factory.seed_user
+
+    reply = send_text("/grafico")
+
+    assert_equal [["Categorias", "chart:categories"], ["Gastos mês a mês", "chart:months"],
+                  ["Caixinhas", "chart:boxes"]], reply.keyboard.flatten(1)
   end
 end

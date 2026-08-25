@@ -1,6 +1,11 @@
 # PecMan
 
-Bot de Telegram pra controle de gastos. Ruby, SQLite.
+Bot de Telegram para controle de gastos pessoais. Ruby, SQLite.
+
+Os lançamentos são feitos em texto livre (`35 mercado`). A leitura é
+determinística: expressão regular extrai valor e data, e as palavras-chave da
+categoria resolvem o resto. Um modelo de linguagem local é consultado apenas
+quando a categoria não é identificada.
 
 ## Setup
 
@@ -11,13 +16,34 @@ set -a; source .env; set +a
 ruby bot.rb
 ```
 
-Banco em `data/pecman.db`, criado no primeiro boot.
+O banco é criado em `data/pecman.db` no primeiro boot, com as migrations
+aplicadas automaticamente.
 
-`bundle install` falhando em `bigdecimal`/`json`: falta `ruby-dev`, ou usa
-`gem install --user-install telegram-bot-ruby sequel sqlite3`.
+Se `bundle install` falhar ao compilar `bigdecimal` ou `json`, falta o pacote
+`ruby-dev`. Alternativa sem build nativo:
 
-Pro parser por LLM, `llama-server` ou Ollama no ar em `LLAMA_URL`. Sem isso o
-bot usa só o regex.
+```sh
+gem install --user-install telegram-bot-ruby sequel sqlite3
+```
+
+Para a interpretação por modelo de linguagem, é preciso ter `llama-server` ou
+Ollama disponível em `LLAMA_URL`. Sem isso o bot opera apenas com a leitura por
+expressão regular.
+
+Em ambientes sem locale UTF-8 (Termux em proot, contêineres enxutos), defina
+`LANG=C.UTF-8` antes de iniciar.
+
+## Logs
+
+Uma linha por evento, em stderr:
+
+```
+2026-08-25T17:42:06Z  INFO  telegram  Bot iniciado. Usuários autorizados: 1
+2026-08-25T17:42:11Z  WARN  llm       Consulta ao modelo falhou, seguindo sem ela: Net::OpenTimeout
+```
+
+`LOG_LEVEL` aceita `debug`, `info` (padrão), `warn` e `error`. Em `debug` os
+backtraces das falhas também são registrados.
 
 ## Contribuindo
 
@@ -25,11 +51,34 @@ bot usa só o regex.
 rake test
 ```
 
-Branches no modelo gitflow: `main` guarda release, `develop` é a base do dia a
-dia, trabalho novo sai em `feature/<nome>` e volta pra `develop`. Correção
-urgente em produção sai de `main` como `hotfix/<nome>`.
+O código é organizado em vertical slices: `lib/features/<assunto>/` reúne
+domínio, casos de uso, presenter e rotas. `lib/shared/` contém o que é usado por
+mais de um slice.
 
-Commits no padrão conventional commits:
+Rotas são declaradas dentro do próprio slice:
+
+```ruby
+class Handler < Shared::Handler
+  route "/parcelas", to: :list
+  callback(/\Aplan:cancel:(\d+)\z/, to: :cancel)
+end
+```
+
+Um slice novo é registrado no router em `lib/config/container.rb`.
+
+`rake test` executa `test/config/architecture_test.rb`, que falha se um slice
+importar outro ou se o domínio importar Sequel.
+
+Um provedor de modelo novo é um arquivo em `lib/shared/infrastructure/llm/`,
+herdando de `HttpExpenseParser` e chamando `Registry.register`.
+
+### Branches e commits
+
+Modelo gitflow: `main` guarda as releases, `develop` é a base do trabalho,
+funcionalidades saem em `feature/<nome>` e correções urgentes em
+`hotfix/<nome>`.
+
+Mensagens no padrão conventional commits:
 
 ```
 feat(installments): aceita mes por extenso no cadastro
@@ -40,25 +89,5 @@ docs: atualiza readme
 chore: ajusta gitignore
 ```
 
-Escopo é o slice (`setup`, `expense`, `installments`, `reports`, `imports`) ou
-vazio quando a mudança é transversal.
-
-Código em vertical slices: `lib/features/<assunto>/` com domínio, casos de uso,
-presenter e rotas juntos. `lib/shared/` é o que mais de um slice usa.
-
-Rota nova fica dentro do slice:
-
-```ruby
-class Handler < Shared::Handler
-  route "/parcelas", to: :list
-  callback(/\Aplan:cancel:(\d+)\z/, to: :cancel)
-end
-```
-
-Slice novo entra no router em `lib/config/container.rb`.
-
-`rake test` roda `test/config/architecture_test.rb`, que quebra se um slice
-importar outro ou se o domínio importar Sequel.
-
-Provider de LLM novo é um arquivo em `lib/shared/infrastructure/llm/` herdando
-de `HttpExpenseParser` e chamando `Registry.register`.
+O escopo é o slice (`setup`, `expense`, `installments`, `reports`, `imports`,
+`account`) ou vazio, quando a mudança é transversal.

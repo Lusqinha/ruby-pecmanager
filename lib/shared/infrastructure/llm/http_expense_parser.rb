@@ -15,7 +15,7 @@ module Infrastructure
     class HttpExpenseParser
       FIELDS = %w[amount description category_hint date].freeze
 
-      def initialize(base_url:, model:, timeout: 8, logger: $stderr)
+      def initialize(base_url:, model:, timeout: 8, logger: Infrastructure::Log.for("llm"))
         @base_url = base_url
         @model = model
         @timeout = timeout
@@ -83,7 +83,7 @@ module Infrastructure
         content = extract(JSON.parse(response.body))
         content && JSON.parse(content)
       rescue StandardError => e
-        @logger&.puts("[llm] #{e.class}: #{e.message}")
+        @logger&.warn("Consulta ao modelo falhou, seguindo sem ela: #{e.class}: #{e.message}")
         nil
       end
 

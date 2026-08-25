@@ -9,8 +9,8 @@ module Features
         when :listed then listed(result)
         when :cancelled then cancelled(result)
         when :toggled then toggled(result)
-        when :missing then Interface::ViewMessage.text("Não achei esse parcelamento.")
-        else Interface::ViewMessage.text("Não entendi o parcelamento. Tenta `1200 em 12x notebook`.")
+        when :missing then Interface::ViewMessage.text("Parcelamento não encontrado.")
+        else Interface::ViewMessage.text("Não reconheci o parcelamento. Exemplo: `1200 em 12x notebook`.")
         end
       end
 
@@ -26,7 +26,7 @@ module Features
       end
 
       def listed(result)
-        return Interface::ViewMessage.text("Nenhum parcelamento ativo.") if result.plans.empty?
+        return Interface::ViewMessage.text("Nenhum parcelamento em aberto.") if result.plans.empty?
 
         total = result.plans.reduce(Domain::Money.zero) { |sum, plan| sum + plan.due_in(result.month) }
         lines = result.plans.map { |plan| plan_line(plan, result.month) }
@@ -48,9 +48,9 @@ module Features
 
       def toggled(result)
         text = if result.in_budget
-                 "As parcelas passam a contar no budget das categorias."
+                 "As parcelas passam a consumir o budget das categorias."
                else
-                 "As parcelas saem do budget e voltam a aparecer só no bloco de parcelas."
+                 "As parcelas saem do budget e passam a aparecer apenas no bloco de parcelas."
                end
         Interface::ViewMessage.new(text: text, keyboard: keyboard(result))
       end
@@ -63,8 +63,8 @@ module Features
 
       def cancelled(result)
         Interface::ViewMessage.text(
-          "Encerrado: #{result.plan.description}. #{result.cancelled_count} parcela(s) futura(s) " \
-          "saíram da conta; a deste mês continua."
+          "Parcelamento encerrado: #{result.plan.description}. #{result.cancelled_count} parcela(s) futura(s) " \
+          "removida(s). A deste mês permanece."
         )
       end
 

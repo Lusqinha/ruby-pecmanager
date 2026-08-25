@@ -4,7 +4,7 @@ module Features
   module Reports
     class Presenter
       def daily(report)
-        return Interface::ViewMessage.text("Nada lançado hoje.") if report.entries.empty?
+        return Interface::ViewMessage.text("Nenhum lançamento hoje.") if report.entries.empty?
 
         lines = ["*Hoje (#{report.date.strftime('%d/%m')})* — #{Interface::Brl.format(report.total)}", ""]
         lines += report.entries.map do |entry|
@@ -14,46 +14,99 @@ module Features
       end
 
       def monthly(report)
-        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         summary = report.summary
         lines = ["*#{report.month.strftime('%m/%Y')}* — gasto #{Interface::Brl.format(report.total)} de #{Interface::Brl.format(summary.committed)} em budgets", ""]
         lines += report.lines.map { |line| category_line(line.category_name, line.spent, line.limit) }
         lines << "· sem categoria: #{Interface::Brl.format(report.uncategorized)}" if report.uncategorized.positive?
         lines += installment_block(report)
-        lines += ["", "Fixos #{Interface::Brl.format(summary.fixed_costs)} · assinaturas #{Interface::Brl.format(summary.subscriptions)} · metas #{Interface::Brl.format(summary.goals)}",
+        lines += ["", "Fixos #{Interface::Brl.format(summary.fixed_costs)} · assinaturas #{Interface::Brl.format(summary.subscriptions)} · caixinhas #{Interface::Brl.format(summary.goals)}",
                   "Sobra do mês: *#{Interface::Brl.format(summary.available - report.total - report.installments_total)}*"]
         Interface::ViewMessage.text(lines.join("\n"))
       end
 
+      # O botão das caixinhas é atendido pelo slice de caixinhas: aqui só o
+      # rótulo e o dado do callback.
+      def chart_menu
+        Interface::ViewMessage.new(
+          text: "Qual gráfico?",
+          keyboard: [[["Categorias", "chart:categories"]],
+                     [["Gastos mês a mês", "chart:months"]],
+                     [["Caixinhas", "chart:boxes"]]]
+        )
+      end
+
+      def chart(report)
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
+
+        rows = report.lines.reject { |line| line.limit.zero? }
+        return Interface::ViewMessage.text("Nenhuma categoria com limite definido. Use /setup.") if rows.empty?
+
+        Interface::ViewMessage.image(
+          Interface::BarChart.render(rows.map { |line| { label: line.category_name, value: remaining(line), limit: line.limit } },
+                                     palette: :remaining),
+          caption: chart_caption(report, rows)
+        )
+      end
+
+      # O gráfico mostra o que ainda dá pra gastar, não o que já saiu.
+      def remaining(line) = [line.limit - line.spent, Domain::Money.zero].max
+
+      def chart_caption(report, rows)
+        left = rows.reduce(Domain::Money.zero) { |sum, line| sum + remaining(line) }
+        lines = ["*#{report.month.strftime('%m/%Y')}* — resta #{Interface::Brl.format(left)} nos budgets", ""]
+        lines += rows.each_with_index.map { |line, index| chart_legend(line, index) }
+        lines << "" << "Parcelas: #{Interface::Brl.format(report.installments_total)}" if report.installments_total.positive?
+        lines.join("\n")
+      end
+
+      def chart_legend(line, index)
+        left = remaining(line)
+        status = left.zero? ? "estourou" : "resta #{Interface::Brl.format(left)}"
+        "#{index + 1}. #{line.category_name}: #{status} de #{Interface::Brl.format(line.limit)}"
+      end
+
+      def history(report)
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
+
+        totals = report.months.map(&:total)
+        return Interface::ViewMessage.text("Nenhum gasto registrado ainda.") if totals.all?(&:zero?)
+
+        Interface::ViewMessage.image(Interface::ColumnChart.render(totals, labels: report.months.map { |line| line.month.strftime('%m/%y') }),
+                                     caption: history_caption(report))
+      end
+
+      def history_caption(report)
+        lines = ["*Gastos mês a mês*", ""]
+        lines += report.months.map do |line|
+          "#{line.month.strftime('%m/%Y')}: #{Interface::Brl.format(line.total)}"
+        end
+        lines.join("\n")
+      end
+
       def category(report)
-        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         unless report.found?
-          return Interface::ViewMessage.text("Não achei essa categoria. Suas: #{report.available_names.join(', ')}")
+          return Interface::ViewMessage.text("Categoria não encontrada. Disponíveis: #{report.available_names.join(', ')}")
         end
 
         lines = ["*#{report.category_name}* — #{report.month.strftime('%m/%Y')}",
                  category_line(report.category_name, report.spent, report.limit), ""]
         lines += report.entries.map { |entry| "· #{entry.date.strftime('%d/%m')} #{Interface::Brl.format(entry.amount)} #{entry.description}" }
-        lines << "_sem lançamentos neste mês_" if report.entries.empty?
+        lines << "_Sem lançamentos neste mês._" if report.entries.empty?
         Interface::ViewMessage.text(lines.join("\n"))
       end
 
       def projection(report)
-        return Interface::ViewMessage.text("Faz o /setup antes.") unless report
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         lines = ["*Projeção* — líquido #{Interface::Brl.format(report.net_income)}/mês", ""]
         lines += report.lines.map { |line| projection_line(line) }
         lines += ["", *report.goals.map { |goal| goal_forecast(goal) }] unless report.goals.empty?
 
         Interface::ViewMessage.text(lines.join("\n"))
-      end
-
-      def goals(report)
-        return Interface::ViewMessage.text("Nenhuma meta cadastrada.") if report.items.empty?
-
-        Interface::ViewMessage.text(report.items.map { |item| goal_line(item) }.join("\n"))
       end
 
       private
@@ -81,7 +134,7 @@ module Features
       end
 
       def goal_forecast(goal)
-        return "· #{goal.name}: fora do horizonte" unless goal.covered_on
+        return "· #{goal.name}: fora do horizonte da projeção" unless goal.covered_on
 
         "✅ #{goal.name} (#{Interface::Brl.format(goal.target)}) em #{goal.covered_on.strftime('%m/%Y')}"
       end

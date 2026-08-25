@@ -3,16 +3,18 @@
 require "telegram/bot"
 require "net/http"
 require "uri"
+require "tempfile"
 
 module Infrastructure
   module Telegram
     # Translates Telegram updates into router calls, and ViewMessages back into
     # Telegram payloads. The only file that knows the gem exists.
     class BotRunner
-      # Uma fatura em JSON não passa disso; o limite existe pra um anexo
-      # qualquer não virar download de megabytes.
+      # Uma fatura em JSON não passa disso; o limite existe para que um anexo
+      # qualquer não vire download de megabytes.
       MAX_DOCUMENT_BYTES = 512 * 1024
-      def initialize(token:, allowed_user_ids:, controller:, logger: $stderr)
+      FAILURE_MESSAGE = "Não consegui processar essa mensagem. Tente novamente."
+      def initialize(token:, allowed_user_ids:, controller:, logger: Infrastructure::Log.for("telegram"))
         @token = token
         @allowed_user_ids = allowed_user_ids
         @controller = controller
@@ -21,7 +23,7 @@ module Infrastructure
 
       def run
         ::Telegram::Bot::Client.run(@token) do |bot|
-          @logger.puts("[bot] rodando. usuários liberados: #{@allowed_user_ids.join(', ')}")
+          @logger&.info("Bot iniciado. Usuários autorizados: #{@allowed_user_ids.size}")
           bot.listen { |update| dispatch(bot, update) }
         end
       end
@@ -34,10 +36,11 @@ module Infrastructure
         when ::Telegram::Bot::Types::CallbackQuery then handle_callback(bot, update)
         end
       rescue StandardError => e
-        # One bad update must never kill the polling loop.
-        @logger.puts("[erro] #{e.class}: #{e.message}\n#{e.backtrace&.first(5)&.join("\n")}")
+        # Uma atualização com defeito nunca pode derrubar o laço de polling.
+        @logger&.error("Falha ao processar atualização: #{e.class}: #{safe(e.message)}")
+        @logger&.debug(safe(e.backtrace&.first(5)&.join(" | ").to_s))
         chat_id = chat_id_for(update)
-        bot.api.send_message(chat_id: chat_id, text: "Deu ruim aqui. Tenta de novo.") if chat_id
+        bot.api.send_message(chat_id: chat_id, text: FAILURE_MESSAGE) if chat_id
       end
 
       def handle_message(bot, message)
@@ -58,7 +61,8 @@ module Infrastructure
         download(bot, document.file_id)
       rescue StandardError => e
         # A URL carrega o token, então a mensagem sai limpa dele.
-        @logger.puts("[download] #{e.class}: #{safe(e.message)}\n#{safe(e.backtrace&.first.to_s)}")
+        @logger&.error("Falha ao baixar anexo: #{e.class}: #{safe(e.message)}")
+        @logger&.debug(safe(e.backtrace&.first.to_s))
         nil
       end
 
@@ -94,15 +98,31 @@ module Infrastructure
 
       def allowed?(user_id) = @allowed_user_ids.include?(user_id)
 
+      # A gem envia arquivo, não bytes soltos: o PNG passa por um Tempfile, que
+      # some sozinho quando o bloco termina.
+      def send_photo(bot, chat_id, reply)
+        Tempfile.create(["grafico", ".png"], binmode: true) do |file|
+          file.write(reply.photo)
+          file.flush
+          bot.api.send_photo(chat_id: chat_id, photo: Faraday::Multipart::FilePart.new(file.path, "image/png"),
+                             caption: reply.text, parse_mode: "Markdown")
+        end
+      rescue StandardError => e
+        @logger&.error("Falha ao enviar imagem: #{e.class}: #{safe(e.message)}")
+        bot.api.send_message(chat_id: chat_id, text: reply.text)
+      end
+
       def send_reply(bot, chat_id, reply)
-        return if reply.nil? || reply.text.to_s.empty?
+        return if reply.nil?
+        return send_photo(bot, chat_id, reply) if reply.photo?
+        return if reply.text.to_s.empty?
 
         markup = markup_for(reply.keyboard)
         bot.api.send_message(chat_id: chat_id, text: reply.text, parse_mode: "Markdown", reply_markup: markup)
       rescue ::Telegram::Bot::Exceptions::ResponseError => e
         # A category named "casa_nova" is enough to break legacy Markdown; the
         # message still has to reach the user.
-        @logger.puts("[telegram] markdown falhou: #{e.message}")
+        @logger&.warn("Markdown recusado pelo Telegram, reenviando como texto simples: #{safe(e.message)}")
         bot.api.send_message(chat_id: chat_id, text: reply.text, reply_markup: markup)
       end
 

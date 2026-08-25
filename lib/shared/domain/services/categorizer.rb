@@ -43,8 +43,16 @@ module Domain
     end
 
     def normalize(text)
-      text.to_s.unicode_normalize(:nfd).gsub(/\p{Mn}/, "").downcase
-          .gsub(/[^a-z0-9\s]/, " ").squeeze(" ").strip
+      utf8(text).unicode_normalize(:nfd).gsub(/\p{Mn}/, "").downcase
+                .gsub(/[^a-z0-9\s]/, " ").squeeze(" ").strip
+    end
+
+    # O Telegram entrega bytes; se o processo não estiver em UTF-8 eles chegam
+    # como ASCII-8BIT e a normalização recusa. scrub tira byte inválido solto.
+    def utf8(text)
+      string = text.to_s
+      string = string.dup.force_encoding(Encoding::UTF_8) unless string.encoding == Encoding::UTF_8
+      string.valid_encoding? ? string : string.scrub("")
     end
   end
 end

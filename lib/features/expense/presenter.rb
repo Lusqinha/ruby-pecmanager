@@ -9,7 +9,7 @@ module Features
         case result.status
         when :recorded then recorded(result)
         when :needs_category then needs_category(result)
-        when :unparseable then Interface::ViewMessage.text("Não entendi. Manda algo como `35 mercado` ou `12,50 uber ontem`.")
+        when :unparseable then Interface::ViewMessage.text("Não identifiquei um valor. Envie algo como `35 mercado` ou `12,50 uber ontem`.")
         else Interface::ViewMessage.text(MISSING)
         end
       end
@@ -17,8 +17,8 @@ module Features
       def undo(result)
         case result.status
         when :undone then Interface::ViewMessage.text("Desfeito: #{Interface::Brl.format(result.expense.amount)} #{result.expense.description}")
-        when :too_old then Interface::ViewMessage.text("Passou da janela de 5 min pra desfazer. Use /mes pra revisar.")
-        else Interface::ViewMessage.text("Nada pra desfazer.")
+        when :too_old then Interface::ViewMessage.text("O prazo de 5 minutos para desfazer já passou. Use /mes para revisar.")
+        else Interface::ViewMessage.text("Não há lançamento recente para desfazer.")
         end
       end
 

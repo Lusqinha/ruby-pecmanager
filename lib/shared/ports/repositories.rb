@@ -35,7 +35,7 @@ module Ports
   end
 
   class GoalRepository < AbstractPort
-    abstract :for_user, :replace_all
+    abstract :for_user, :replace_all, :save
   end
 
   class InstallmentPlanRepository < AbstractPort
