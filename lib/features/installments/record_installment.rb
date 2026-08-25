@@ -47,7 +47,8 @@ module Features
       def build(user_id, parsed, category)
         Domain::InstallmentPlan.new(
           user_id: user_id, category_id: category&.id, description: parsed[:description][0, 120],
-          total: parsed[:total], count: parsed[:count], first_month: parsed[:first_month]
+          total: parsed[:total], count: parsed[:count], first_month: parsed[:first_month],
+          created_at: @clock.now
         )
       end
     end

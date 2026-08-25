@@ -39,7 +39,7 @@ module Ports
   end
 
   class InstallmentPlanRepository < AbstractPort
-    abstract :for_user, :active, :find, :add, :save
+    abstract :for_user, :active, :find, :add, :save, :created_since, :delete
   end
 
   class PendingImportRepository < AbstractPort

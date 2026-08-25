@@ -21,6 +21,10 @@ module Infrastructure
       class UserRepository < Repository
         def find(id) = Mappers.user(db[:users][id: id])
 
+        # As tabelas do usuário estão todas em cascade: apagar a linha dele leva
+        # categorias, gastos, planos, fixos, assinaturas e metas junto.
+        def delete(id) = db[:users].where(id: id).delete
+
         def save(user)
           row = { name: user.name, salary_cents: user.salary.cents, setup_done_at: user.setup_done_at,
                   installments_in_budget: user.installments_in_budget? }
@@ -103,9 +107,16 @@ module Infrastructure
           Mappers.installment_plan(db[:installment_plans][user_id: user_id, id: id])
         end
 
+        def created_since(user_id, time)
+          db[:installment_plans].where(user_id: user_id).where { created_at >= time }
+                                .order(:id).map { |row| Mappers.installment_plan(row) }
+        end
+
+        def delete(user_id, id) = db[:installment_plans].where(user_id: user_id, id: id).delete
+
         def add(plan)
           id = db[:installment_plans].insert(
-            Mappers.installment_plan_row(plan, plan.user_id).merge(created_at: Time.now)
+            Mappers.installment_plan_row(plan, plan.user_id).merge(created_at: plan.created_at || Time.now)
           )
           find(plan.user_id, id)
         end
@@ -138,6 +149,11 @@ module Infrastructure
         def last_for(user_id)
           row = db[:expenses].where(user_id: user_id).order(Sequel.desc(:id)).first
           row && Mappers.expense(row)
+        end
+
+        def created_since(user_id, time)
+          db[:expenses].where(user_id: user_id).where { created_at >= time }
+                       .order(:id).map { |row| Mappers.expense(row) }
         end
 
         def for_period(user_id, range)

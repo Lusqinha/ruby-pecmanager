@@ -59,7 +59,7 @@ module Features
         @installment_repository.add(
           Domain::InstallmentPlan.new(
             user_id: user_id, category_id: category&.id, description: item.description, origin: source,
-            total: item.total, count: item.count, first_month: item.first_month
+            total: item.total, count: item.count, first_month: item.first_month, created_at: @clock.now
           )
         )
       end

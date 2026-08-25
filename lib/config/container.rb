@@ -13,7 +13,7 @@ module Config
     # Order matters: setup intercepts while a wizard is open, and expense holds
     # the free-text fallback, so it answers last.
     def router
-      @router ||= Router.new(handlers: [setup_handler, reports_handler, help_handler,
+      @router ||= Router.new(handlers: [setup_handler, account_handler, reports_handler, help_handler,
                                         imports_handler, installments_handler, expense_handler])
     end
 
@@ -45,6 +45,21 @@ module Config
         ),
         undo_expense: Features::Expense::UndoExpense.new(expense_repository: expenses, clock: @clock),
         presenter: Features::Expense::Presenter.new
+      )
+    end
+
+    def account_handler
+      Features::Account::Handler.new(
+        preview_rollback: Features::Account::PreviewRollback.new(
+          expense_repository: expenses, installment_repository: installment_plans, clock: @clock
+        ),
+        apply_rollback: Features::Account::ApplyRollback.new(
+          expense_repository: expenses, installment_repository: installment_plans
+        ),
+        wipe_account: Features::Account::WipeAccount.new(
+          user_repository: users, draft_repository: drafts, pending_repository: pending_imports
+        ),
+        presenter: Features::Account::Presenter.new
       )
     end
 
