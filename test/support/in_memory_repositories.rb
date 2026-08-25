@@ -326,6 +326,7 @@ module InMemory
         monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: clock, user_repository: users),
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: clock),
         projection: view_projection,
+        history: Features::Reports::ViewHistory.new(expense_repository: expenses, clock: clock),
         presenter: Features::Reports::Presenter.new
       )
     end

@@ -29,25 +29,49 @@ module Features
       def chart(report)
         return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
-        rows = report.lines.reject { |line| line.spent.zero? && line.limit.zero? }
-        return Interface::ViewMessage.text("Nenhum lançamento neste mês.") if rows.empty?
+        rows = report.lines.reject { |line| line.limit.zero? }
+        return Interface::ViewMessage.text("Nenhuma categoria com limite definido. Use /setup.") if rows.empty?
 
         Interface::ViewMessage.image(
-          Interface::BarChart.render(rows.map { |line| { value: line.spent, limit: line.limit } }),
+          Interface::BarChart.render(rows.map { |line| { value: remaining(line), limit: line.limit } },
+                                     palette: :remaining),
           caption: chart_caption(report, rows)
         )
       end
 
+      # O gráfico mostra o que ainda dá pra gastar, não o que já saiu.
+      def remaining(line) = [line.limit - line.spent, Domain::Money.zero].max
+
       def chart_caption(report, rows)
-        lines = ["*#{report.month.strftime('%m/%Y')}* — gasto #{Interface::Brl.format(report.total)}", ""]
+        left = rows.reduce(Domain::Money.zero) { |sum, line| sum + remaining(line) }
+        lines = ["*#{report.month.strftime('%m/%Y')}* — resta #{Interface::Brl.format(left)} nos budgets", ""]
         lines += rows.each_with_index.map { |line, index| chart_legend(line, index) }
         lines << "" << "Parcelas: #{Interface::Brl.format(report.installments_total)}" if report.installments_total.positive?
         lines.join("\n")
       end
 
       def chart_legend(line, index)
-        limit = line.limit.zero? ? "sem limite" : "de #{Interface::Brl.format(line.limit)}"
-        "#{index + 1}. #{line.category_name}: #{Interface::Brl.format(line.spent)} #{limit}"
+        left = remaining(line)
+        status = left.zero? ? "estourou" : "resta #{Interface::Brl.format(left)}"
+        "#{index + 1}. #{line.category_name}: #{status} de #{Interface::Brl.format(line.limit)}"
+      end
+
+      def history(report)
+        return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
+
+        totals = report.months.map(&:total)
+        return Interface::ViewMessage.text("Nenhum gasto registrado ainda.") if totals.all?(&:zero?)
+
+        Interface::ViewMessage.image(Interface::ColumnChart.render(totals),
+                                     caption: history_caption(report))
+      end
+
+      def history_caption(report)
+        lines = ["*Gastos mês a mês*", ""]
+        lines += report.months.map do |line|
+          "#{line.month.strftime('%m/%Y')}: #{Interface::Brl.format(line.total)}"
+        end
+        lines.join("\n")
       end
 
       def category(report)

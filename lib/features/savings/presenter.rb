@@ -13,6 +13,33 @@ module Features
         end
       end
 
+      def chart(result)
+        boxes = result.boxes.to_a.reject { |box| box.target.zero? }
+        return Interface::ViewMessage.text("Nenhuma caixinha com valor definido. Use /setup.") if boxes.empty?
+
+        Interface::ViewMessage.image(
+          Interface::BarChart.render(boxes.map { |box| { value: box.saved, limit: box.target } },
+                                     palette: :progress),
+          caption: chart_caption(boxes, result.today)
+        )
+      end
+
+      def chart_caption(boxes, today)
+        lines = ["*Caixinhas*", ""]
+        lines += boxes.each_with_index.map { |box, index| "#{index + 1}. #{chart_line(box, today)}" }
+        lines.join("\n")
+      end
+
+      # A previsão só existe quando há prazo: sem ele a caixinha recebe o que
+      # sobrar, e não há mês para prometer.
+      def chart_line(box, today)
+        head = "#{box.name}: #{Interface::Brl.format(box.saved)} de #{Interface::Brl.format(box.target)}"
+        return "#{head} — completa" if box.complete?
+        return "#{head} · sem prazo" if box.deadline.nil?
+
+        "#{head} · #{Interface::Brl.format(box.monthly)}/mês até #{box.deadline.strftime('%m/%Y')}"
+      end
+
       private
 
       def deposited(result)

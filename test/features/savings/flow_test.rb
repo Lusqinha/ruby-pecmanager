@@ -75,4 +75,31 @@ class SavingsFlowTest < SliceCase
 
     assert_includes send_text("/metas").text, "Viagem"
   end
+  def test_the_box_chart_shows_progress_and_the_forecast
+    seed_boxes
+    @factory.goals.replace_all(3, [
+                                 Domain::Goal.new(name: "Reserva", target: Domain::Money.new(1_000_000),
+                                                  deadline: Date.new(2027, 12, 1)),
+                                 Domain::Goal.new(name: "Viagem", target: Domain::Money.new(300_000))
+                               ])
+    send_text("/caixinha reserva 1500")
+
+    reply = send_text("/grafico_caixinhas")
+
+    assert reply.photo?
+    assert_equal "\x89PNG\r\n\x1A\n".b, reply.photo[0, 8]
+    assert_includes reply.text, "1. Reserva: R$ 1.500,00 de R$ 10.000,00"
+    assert_includes reply.text, "/mês até 12/2027"
+    assert_includes reply.text, "sem prazo"
+  end
+
+  def test_the_box_chart_needs_a_target
+    @factory.seed_user
+    @factory.goals.replace_all(3, [Domain::Goal.new(name: "Solta", target: Domain::Money.zero)])
+
+    reply = send_text("/grafico_caixinhas")
+
+    refute reply.photo?
+    assert_includes reply.text, "Nenhuma caixinha com valor"
+  end
 end

@@ -16,10 +16,18 @@ module Interface
     UNDER = [47, 133, 90].freeze
     NO_LIMIT = [110, 120, 132].freeze
 
+    # Quanto mais cheia a barra, pior no gasto e melhor no restante ou no
+    # progresso de uma caixinha.
+    PALETTES = {
+      spending: [UNDER, NEAR, OVER],
+      remaining: [OVER, NEAR, UNDER],
+      progress: [OVER, NEAR, UNDER]
+    }.freeze
+
     module_function
 
     # rows: [{ value: Money, limit: Money }] na ordem em que serão legendados.
-    def render(rows)
+    def render(rows, palette: :spending)
       height = (MARGIN * 2) + (ROW_HEIGHT * [rows.size, 1].max)
       canvas = Canvas.new(width: WIDTH, height: height, background: BACKGROUND)
       span = WIDTH - (MARGIN * 2)
@@ -27,7 +35,7 @@ module Interface
       rows.each_with_index do |row, index|
         top = MARGIN + (index * ROW_HEIGHT)
         canvas.rect(MARGIN, top, span, BAR_HEIGHT, TRACK)
-        canvas.rect(MARGIN, top, filled(row, span), BAR_HEIGHT, color(row))
+        canvas.rect(MARGIN, top, filled(row, span), BAR_HEIGHT, color(row, palette))
       end
 
       canvas.to_png
@@ -41,14 +49,15 @@ module Interface
       [(span * row[:value].cents) / row[:limit].cents, span].min
     end
 
-    def color(row)
+    def color(row, palette)
       return NO_LIMIT if row[:limit].zero?
 
+      low, middle, high = PALETTES.fetch(palette)
       ratio = row[:value].cents * 100 / row[:limit].cents
-      return OVER if ratio >= 100
-      return NEAR if ratio >= 70
+      return high if ratio >= 100
+      return middle if ratio >= 70
 
-      UNDER
+      low
     end
   end
 end

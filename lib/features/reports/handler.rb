@@ -6,13 +6,15 @@ module Features
       route "/hoje", to: :daily
       route "/grafico", to: :chart
       route "/gráfico", to: :chart
+      route "/grafico_meses", to: :history
       route "/mes", to: :monthly
       route "/mês", to: :monthly
       route "/projecao", to: :projection
       route "/projeção", to: :projection
       route(%r{\A/categoria(?:\s+(.+))?\z}i, to: :category)
 
-      def initialize(daily:, monthly:, category:, projection:, presenter:)
+      def initialize(daily:, monthly:, category:, projection:, history:, presenter:)
+        @history = history
         @daily = daily
         @monthly = monthly
         @category = category
@@ -22,6 +24,7 @@ module Features
 
       def daily(request) = @presenter.daily(@daily.call(user_id: request.user_id))
       def chart(request) = @presenter.chart(@monthly.call(user_id: request.user_id))
+      def history(request) = @presenter.history(@history.call(user_id: request.user_id))
       def monthly(request) = @presenter.monthly(@monthly.call(user_id: request.user_id))
       def projection(request) = @presenter.projection(@projection.call(user_id: request.user_id))
 

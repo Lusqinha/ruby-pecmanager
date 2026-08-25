@@ -11,6 +11,9 @@ Para parcelamento: `1200 em 12x notebook` ou `12x de 100 notebook`.
           *Comandos*
           /hoje — o que saiu hoje
           /mes — resumo do mês com budgets
+          /grafico — o que resta em cada categoria
+          /grafico_meses — gastos mês a mês
+          /grafico_caixinhas — progresso das caixinhas
           /categoria mercado — detalhe de uma categoria
           /caixinhas — saldo de cada caixinha
           /caixinha viagem 200 — guarda numa caixinha (valor negativo retira)
