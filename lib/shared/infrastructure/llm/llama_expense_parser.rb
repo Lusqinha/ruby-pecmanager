@@ -27,6 +27,11 @@ module Infrastructure
         }
       end
 
+      def advice_payload_for(prompt)
+        { model: model, temperature: 0.2, max_tokens: 120,
+          messages: [{ role: "user", content: prompt }] }
+      end
+
       def extract(body) = body.dig("choices", 0, "message", "content")
 
       Registry.register("llamacpp", self)

@@ -28,13 +28,14 @@ module Features
 
       # O botão das caixinhas é atendido pelo slice de caixinhas: aqui só o
       # rótulo e o dado do callback.
-      def weekly(report)
+      def weekly(report, advice = nil)
         return Interface::ViewMessage.text("Configuração ainda não concluída. Use /setup.") unless report
 
         header = "*Semana de #{report.from.strftime('%d/%m')} a #{report.to.strftime('%d/%m')}*"
         lines = [header, week_total(report), ""]
         lines << "Restam *#{report.days_left} dias* no mês:"
         lines += report.lines.map { |line| weekly_line(line) }
+        lines += ["", "*Parecer*", advice] if advice
 
         Interface::ViewMessage.text(lines.join("\n"))
       end

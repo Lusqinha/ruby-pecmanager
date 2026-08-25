@@ -45,6 +45,11 @@ module Infrastructure
           format: SCHEMA, keep_alive: @keep_alive, options: @options }
       end
 
+      def advice_payload_for(prompt)
+        { model: model, prompt: prompt, stream: false, keep_alive: @keep_alive,
+          options: @options.merge(num_predict: 120, temperature: 0.2) }
+      end
+
       def extract(body) = body["response"]
 
       def warmup
