@@ -33,7 +33,7 @@ module Features
         return Interface::ViewMessage.text("Nenhuma categoria com limite definido. Use /setup.") if rows.empty?
 
         Interface::ViewMessage.image(
-          Interface::BarChart.render(rows.map { |line| { value: remaining(line), limit: line.limit } },
+          Interface::BarChart.render(rows.map { |line| { label: line.category_name, value: remaining(line), limit: line.limit } },
                                      palette: :remaining),
           caption: chart_caption(report, rows)
         )
@@ -62,7 +62,7 @@ module Features
         totals = report.months.map(&:total)
         return Interface::ViewMessage.text("Nenhum gasto registrado ainda.") if totals.all?(&:zero?)
 
-        Interface::ViewMessage.image(Interface::ColumnChart.render(totals),
+        Interface::ViewMessage.image(Interface::ColumnChart.render(totals, labels: report.months.map { |line| line.month.strftime('%m/%y') }),
                                      caption: history_caption(report))
       end
 

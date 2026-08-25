@@ -31,11 +31,29 @@ module Interface
 
     def pixel(x, y) = @pixels[offset(x, y), RGB].unpack("C*")
 
+    # Texto em fonte bitmap: cada ponto aceso vira um quadrado de `scale`.
+    def text(left, top, string, color, scale: 2)
+      string.to_s.each_char.with_index do |char, index|
+        draw_glyph(left + (index * (Font::WIDTH + Font::SPACING) * scale), top, char, color, scale)
+      end
+      self
+    end
+
     def to_png
       SIGNATURE + chunk("IHDR", header) + chunk("IDAT", Zlib::Deflate.deflate(scanlines)) + chunk("IEND", "")
     end
 
     private
+
+    def draw_glyph(left, top, char, color, scale)
+      Font.glyph(char).each_with_index do |row, y|
+        row.each_char.with_index do |bit, x|
+          next if bit == "0"
+
+          rect(left + (x * scale), top + (y * scale), scale, scale, color)
+        end
+      end
+    end
 
     def offset(x, y) = ((y * @width) + x) * RGB
 
