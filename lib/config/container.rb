@@ -55,7 +55,7 @@ module Config
           pending_repository: pending_imports
         ),
         confirm_import: Features::Imports::ConfirmImport.new(
-          category_repository: categories, installment_repository: installment_plans,
+          category_repository: categories, installment_repository: installment_plans, user_repository: users,
           expense_repository: expenses, pending_repository: pending_imports, clock: @clock
         ),
         category_repository: categories, pending_repository: pending_imports,
@@ -66,14 +66,17 @@ module Config
     def installments_handler
       Features::Installments::Handler.new(
         record_installment: Features::Installments::RecordInstallment.new(
-          category_repository: categories, installment_repository: installment_plans,
+          category_repository: categories, installment_repository: installment_plans, user_repository: users,
           parser: @expense_parser || llm_parser, clock: @clock
         ),
         cancel_installment: Features::Installments::CancelInstallment.new(
           installment_repository: installment_plans, clock: @clock
         ),
         view_installments: Features::Installments::ViewInstallments.new(
-          installment_repository: installment_plans, clock: @clock
+          installment_repository: installment_plans, user_repository: users, clock: @clock
+        ),
+        toggle_budget: Features::Installments::ToggleBudget.new(
+          user_repository: users, installment_repository: installment_plans, clock: @clock
         ),
         presenter: Features::Installments::Presenter.new
       )
@@ -89,7 +92,7 @@ module Config
 
       Features::Reports::Handler.new(
         daily: Features::Reports::ViewDaily.new(expense_repository: expenses, category_repository: categories, clock: @clock),
-        monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: @clock),
+        monthly: Features::Reports::ViewMonthly.new(plan_assembler: plan_assembler, expense_repository: expenses, installment_repository: installment_plans, clock: @clock, user_repository: users),
         category: Features::Reports::ViewCategory.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: @clock),
         goals: Features::Reports::ViewGoals.new(goal_repository: goals, clock: @clock),
         projection: view_projection,

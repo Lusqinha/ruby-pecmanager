@@ -33,14 +33,16 @@ class ImportFlowTest < SliceCase
     assert_includes reply.text, "Levydossantosda 6/12"
     assert_includes reply.text, "03/2026"
     assert_empty @factory.installment_plans.for_user(3)
-    assert_equal [["Confirmar", "import:ok"], ["Descartar", "import:no"]], reply.keyboard.flatten(1)
+    assert_includes reply.text, "consumir o budget"
+    assert_equal [["Contar no budget", "import:budget"], ["Fora do budget", "import:free"],
+                  ["Descartar", "import:no"]], reply.keyboard.flatten(1)
   end
 
   def test_confirming_records_the_plans_with_the_start_month_walked_back
     @factory.seed_user
     send_text(parcelas)
 
-    reply = tap_button("import:ok")
+    reply = tap_button("import:free")
     plans = @factory.installment_plans.for_user(3)
 
     assert_equal 2, plans.size
@@ -63,7 +65,7 @@ class ImportFlowTest < SliceCase
   def test_importing_the_same_invoice_again_finds_the_duplicates
     @factory.seed_user
     send_text(parcelas)
-    tap_button("import:ok")
+    tap_button("import:free")
 
     reply = send_text(parcelas)
 
@@ -94,5 +96,27 @@ class ImportFlowTest < SliceCase
 
     assert_includes reply.text, "Separa em dois JSON"
     assert_empty @factory.expenses.rows
+  end
+  def test_choosing_out_of_the_budget_skips_categorization
+    @factory.seed_user
+    send_text(parcelas)
+
+    reply = tap_button("import:free")
+
+    refute @factory.users.find(3).installments_in_budget?
+    assert(@factory.installment_plans.for_user(3).all? { |plan| plan.category_id.nil? })
+    assert_includes reply.text, "fora do budget"
+  end
+
+  def test_choosing_the_budget_categorizes_and_remembers_the_answer
+    @factory.seed_user
+    send_text(%({"lancamentos":[{"data":"2026-08-09","descricao":"uber mensal","valor":"100,00","parcela":1,"parcelas":12}]}))
+
+    reply = tap_button("import:budget")
+    plan = @factory.installment_plans.for_user(3).first
+
+    assert @factory.users.find(3).installments_in_budget?
+    assert_equal "Transporte", @factory.categories.find(3, plan.category_id).name
+    assert_includes reply.text, "budget"
   end
 end

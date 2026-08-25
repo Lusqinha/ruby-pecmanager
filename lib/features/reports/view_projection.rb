@@ -20,21 +20,23 @@ module Features
         return nil unless user
 
         plans = @installment_repository.for_user(user_id)
-        lines = build_lines(plan, plans)
+        lines = build_lines(plan, plans, user.installments_in_budget?)
 
         ProjectionReport.new(net_income: plan.net_income, lines: lines, goals: goals(plan, lines))
       end
 
       private
 
-      def build_lines(plan, plans)
+      def build_lines(plan, plans, in_budget)
         budgets = total(plan.categories) { |category| category.budget_for(plan.net_income) }
         fixed = plan.living_costs + total(plan.subscriptions, &:monthly_amount)
         accumulated = Domain::Money.zero
 
         months(plans).map do |month|
           installments = total(plans) { |item| item.due_in(month) || Domain::Money.zero }
-          leftover = plan.net_income - installments - budgets - fixed
+          # Contando no budget, a parcela já está dentro do teto: subtrair de
+          # novo tiraria o mesmo dinheiro duas vezes.
+          leftover = plan.net_income - budgets - fixed - (in_budget ? Domain::Money.zero : installments)
           accumulated += leftover
 
           ProjectionLine.new(month: month, installments: installments, budgets: budgets,

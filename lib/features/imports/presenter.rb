@@ -59,11 +59,18 @@ module Features
         lines << ""
         lines << "#{result.items.size} #{result.kind == :installments ? 'parcelamento(s)' : 'gasto(s)'}" \
                  "#{duplicates(result)}."
+        lines += ["", "Essas parcelas devem consumir o budget das categorias?"] if result.kind == :installments
 
-        Interface::ViewMessage.new(
-          text: lines.join("\n"),
-          keyboard: [[["Confirmar", "import:ok"], ["Descartar", "import:no"]]]
-        )
+        Interface::ViewMessage.new(text: lines.join("\n"), keyboard: buttons(result.kind))
+      end
+
+      # A pergunta cai aqui, antes de qualquer categorização: fora do budget o
+      # bot nem tenta adivinhar categoria pras parcelas.
+      def buttons(kind)
+        return [[["Confirmar", "import:ok"], ["Descartar", "import:no"]]] unless kind == :installments
+
+        [[["Contar no budget", "import:budget"], ["Fora do budget", "import:free"]],
+         [["Descartar", "import:no"]]]
       end
 
       def item_line(item)
@@ -79,9 +86,18 @@ module Features
       end
 
       def recorded(result)
-        pending = result.uncategorized.to_i
-        tail = pending.positive? ? " #{pending} sem categoria — vão aparecer no /mes como sem categoria." : ""
-        Interface::ViewMessage.text("✅ #{result.recorded} lançado(s).#{tail}")
+        Interface::ViewMessage.text("✅ #{result.recorded} lançado(s).#{budget_note(result)}#{pending(result)}")
+      end
+
+      def budget_note(result)
+        return "" if result.in_budget.nil?
+
+        result.in_budget ? " Entram no budget das categorias." : " Ficam fora do budget, em bloco próprio."
+      end
+
+      def pending(result)
+        count = result.uncategorized.to_i
+        count.positive? ? " #{count} sem categoria — aparecem assim no /mes." : ""
       end
 
       # As categorias e as keywords aprendidas vão no prompt: sem isso a IA

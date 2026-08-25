@@ -60,4 +60,14 @@ class ReportsFlowTest < SliceCase
     assert_includes reply.text, "uber mensal 1/12"
     assert_includes reply.text, "R$ 100,00"
   end
+  def test_the_month_adds_the_instalment_to_the_category_when_the_option_is_on
+    @factory.seed_user
+    tap_button("plan:budget:on")
+    send_text("1200 em 12x uber mensal")
+
+    reply = send_text("/mes")
+
+    # 100,00 da parcela entram na linha de Transporte
+    assert_includes reply.text, "Transporte: █░░░░░░░░░ R$ 100,00/R$ 1.000,00"
+  end
 end

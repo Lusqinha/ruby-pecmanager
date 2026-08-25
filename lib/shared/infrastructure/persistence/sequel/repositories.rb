@@ -22,7 +22,8 @@ module Infrastructure
         def find(id) = Mappers.user(db[:users][id: id])
 
         def save(user)
-          row = { name: user.name, salary_cents: user.salary.cents, setup_done_at: user.setup_done_at }
+          row = { name: user.name, salary_cents: user.salary.cents, setup_done_at: user.setup_done_at,
+                  installments_in_budget: user.installments_in_budget? }
           existing = db[:users].where(id: user.id)
           existing.any? ? existing.update(row) : db[:users].insert(row.merge(id: user.id, created_at: Time.now))
           find(user.id)
