@@ -1,0 +1,8 @@
+.env
+data/
+*.db
+.bundle/
+vendor/
+
+# Notas de design e planejamento, uso local
+docs/
