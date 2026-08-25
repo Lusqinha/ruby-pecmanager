@@ -47,4 +47,25 @@ class CanvasTest < Minitest::Test
     assert_equal [1, 2, 3], canvas.pixel(0, 0)
     assert_equal [1, 2, 3], canvas.pixel(3, 3)
   end
+
+  def test_text_lights_pixels_where_the_glyph_says
+    canvas = Canvas.new(width: 20, height: 12, background: [255, 255, 255])
+    canvas.text(0, 0, "1", [0, 0, 0], scale: 1)
+
+    # "1" tem o topo do numeral na coluna 2 da matriz 5x7
+    assert_equal [0, 0, 0], canvas.pixel(2, 0)
+    assert_equal [255, 255, 255], canvas.pixel(0, 0)
+  end
+
+  def test_text_scales_each_point_into_a_square
+    canvas = Canvas.new(width: 30, height: 20, background: [255, 255, 255])
+    canvas.text(0, 0, "1", [0, 0, 0], scale: 2)
+
+    assert_equal [0, 0, 0], canvas.pixel(4, 0)
+    assert_equal [0, 0, 0], canvas.pixel(5, 1)
+  end
+
+  def test_an_unknown_character_falls_back_to_blank
+    assert_equal Interface::Font.glyph(" "), Interface::Font.glyph("ç")
+  end
 end

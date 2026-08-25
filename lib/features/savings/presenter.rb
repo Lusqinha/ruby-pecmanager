@@ -18,7 +18,7 @@ module Features
         return Interface::ViewMessage.text("Nenhuma caixinha com valor definido. Use /setup.") if boxes.empty?
 
         Interface::ViewMessage.image(
-          Interface::BarChart.render(boxes.map { |box| { value: box.saved, limit: box.target } },
+          Interface::BarChart.render(boxes.map { |box| { label: box.name, value: box.saved, limit: box.target } },
                                      palette: :progress),
           caption: chart_caption(boxes, result.today)
         )
