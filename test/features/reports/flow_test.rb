@@ -112,12 +112,77 @@ class ReportsFlowTest < SliceCase
     assert_includes reply.text, "Nenhum gasto registrado"
   end
 
-  def test_the_chart_command_offers_the_three_options
+  # A assinatura cadastrada não gera lançamento, mas ocupa o teto igual.
+  def test_the_month_counts_the_subscriptions_in_their_category
+    @factory.categories.replace_all(3, [Domain::Category.new(name: "Assinaturas",
+                                                             limit: Domain::BudgetLimit.fixed(money(20_000)))])
+    @factory.subscriptions.replace_all(3, [Domain::Subscription.new(name: "Netflix", amount: money(4_000))])
+
+    reply = send_text("/mes")
+
+    assert_includes reply.text, "Assinaturas: ██░░░░░░░░ R$ 40,00/R$ 200,00 (20%)"
+    assert_includes reply.text, "(no budget)"
+    assert_includes send_text("/categoria assinaturas").text, "Inclui R$ 40,00 de assinaturas"
+  end
+
+  def test_the_month_can_be_asked_by_name_and_walked_with_the_buttons
+    reply = send_text("/mes out/26")
+
+    assert_includes reply.text, "*10/2026* — previsão"
+    assert_equal [["◀ 09/26", "month:2026-09"], ["11/26 ▶", "month:2026-11"]], reply.keyboard.flatten(1)
+    assert_includes tap_button("month:2026-11").text, "*11/2026*"
+    assert_includes send_text("/mes banana").text, "Não entendi o mês"
+  end
+
+  # A parcela marcada para um mês futuro aparece nele, mesmo sem gasto nenhum.
+  def test_a_future_month_shows_the_installments_already_booked
+    send_text("1200 em 12x uber mensal")
+
+    assert_includes send_text("/mes 12/2026").text, "uber mensal 5/12"
+  end
+
+  def test_the_month_suggests_how_to_split_the_leftover_between_the_boxes
+    @factory.goals.replace_all(3, [
+                                 Domain::Goal.new(name: "reserva", target: money(1_000_000),
+                                                  deadline: Date.new(2028, 1, 1)),
+                                 Domain::Goal.new(name: "notebook", target: money(500_000),
+                                                  deadline: Date.new(2027, 1, 1))
+                               ])
+
+    reply = send_text("/mes")
+
+    # Sobra de 3.500,00 com os tetos cheios: 90% para o prazo mais curto.
+    assert_includes reply.text, "*Guardar em 08/2026* — R$ 3.500,00"
+    assert_includes reply.text, "· *notebook*: R$ 3.150,00 — prioridade, prazo 01/2027"
+    assert_includes reply.text, "· *reserva*: R$ 350,00"
+  end
+
+  def test_a_tight_month_suggests_moving_quota_between_the_categories
+    @factory.goals.replace_all(3, [Domain::Goal.new(name: "urgente", target: money(500_000),
+                                                    deadline: Date.new(2026, 9, 1))])
+
+    reply = send_text("/mes")
+
+    assert_includes reply.text, "*Remanejo sugerido* — faltam R$ 1.500,00"
+    assert_includes reply.text, "· *Transporte*: R$ 1.000,00 → R$ 0,00"
+    assert_includes reply.text, "· *Mercado*: R$ 500,00 → R$ 0,00"
+  end
+
+  # Mês futuro não tem gasto nenhum: toda categoria pareceria folgada.
+  def test_a_future_month_does_not_suggest_a_rebalance
+    @factory.goals.replace_all(3, [Domain::Goal.new(name: "urgente", target: money(500_000),
+                                                    deadline: Date.new(2026, 9, 1))])
+
+    refute_includes send_text("/mes 12/2026").text, "Remanejo"
+  end
+
+  def test_the_chart_command_offers_every_option
     @factory.seed_user
 
     reply = send_text("/grafico")
 
     assert_equal [["Categorias", "chart:categories"], ["Gastos mês a mês", "chart:months"],
-                  ["Caixinhas", "chart:boxes"]], reply.keyboard.flatten(1)
+                  ["Caixinhas", "chart:boxes"], ["Acumulado da projeção", "chart:accumulated"]],
+                 reply.keyboard.flatten(1)
   end
 end

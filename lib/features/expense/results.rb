@@ -2,7 +2,7 @@
 
 module Features
   module Expense
-    Result = Struct.new(:status, :expense, :category, :categories, :spent_in_month, :limit,
+    Result = Struct.new(:status, :expense, :category, :categories, :spent_in_month, :limit, :moves,
                         keyword_init: true) do
       def recorded? = status == :recorded
       def needs_category? = status == :needs_category

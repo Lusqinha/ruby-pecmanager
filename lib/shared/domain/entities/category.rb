@@ -14,6 +14,10 @@ module Domain
 
     def budget_for(salary) = limit.cents_for(salary)
 
+    def with_limit(new_limit)
+      self.class.new(id: id, user_id: user_id, name: name, keywords: keywords, limit: new_limit)
+    end
+
     def with_keyword(word)
       word = word.to_s.strip.downcase
       return self if word.empty? || keywords.include?(word)

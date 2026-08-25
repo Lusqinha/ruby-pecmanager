@@ -3,12 +3,9 @@
 module Features
   module Expense
     class RecordExpense
-      def initialize(user_repository:, category_repository:, expense_repository:, parser:, clock:,
-                     fixed_cost_repository:,
+      def initialize(plan_assembler:, expense_repository:, parser:, clock:,
                      deterministic_parser: Infrastructure::Parsing::RegexExpenseParser.new)
-        @fixed_cost_repository = fixed_cost_repository
-        @user_repository = user_repository
-        @category_repository = category_repository
+        @plan_assembler = plan_assembler
         @expense_repository = expense_repository
         @parser = parser
         @deterministic_parser = deterministic_parser
@@ -16,16 +13,15 @@ module Features
       end
 
       def call(user_id:, text:)
-        categories = @category_repository.for_user(user_id)
-        parsed, category = interpret(text, categories)
+        _user, plan = @plan_assembler.call(user_id: user_id)
+        parsed, category = interpret(text, plan.categories)
         return Result.new(status: :unparseable) unless parsed
 
         expense = @expense_repository.add(build(user_id, parsed, category))
 
-        return Result.new(status: :needs_category, expense: expense, categories: categories) unless category
+        return Result.new(status: :needs_category, expense: expense, categories: plan.categories) unless category
 
-        user = @user_repository.find(user_id)
-        Support.recorded(expense, category, @expense_repository, user, Support.net_income(user, @fixed_cost_repository))
+        Support.recorded(expense, category, @expense_repository, plan)
       end
 
       private
@@ -66,16 +62,26 @@ module Features
     module Support
       module_function
 
-      def net_income(user, fixed_cost_repository)
-        Domain::NetIncome.of(user.salary, fixed_cost_repository.for_user(user.id))
+      def recorded(expense, category, expense_repository, plan)
+        totals = expense_repository.totals_by_category(expense.user_id, Domain::Month.range(expense.spent_on))
+        spent = plan.spent_for(category, totals)
+        limit = category.budget_for(plan.net_income)
+
+        Result.new(status: :recorded, expense: expense, category: category, spent_in_month: spent, limit: limit,
+                   moves: rebalance(plan, category, spent, limit, totals))
       end
 
-      def recorded(expense, category, expense_repository, user, net_income)
-        spent = expense_repository.for_category(user.id, category.id, Domain::Month.range(expense.spent_on))
-                                  .reduce(Domain::Money.zero) { |total, item| total + item.amount }
+      # Estourou o teto: em vez de só avisar, diz de onde tirar a cota — o mês
+      # inteiro continua cabendo no mesmo dinheiro.
+      def rebalance(plan, category, spent, limit, totals)
+        return [] if limit.zero? || spent <= limit
 
-        Result.new(status: :recorded, expense: expense, category: category,
-                   spent_in_month: spent, limit: category.budget_for(net_income))
+        slots = plan.categories.map do |item|
+          Domain::Rebalance::Slot.new(name: item.name, limit: item.budget_for(plan.net_income),
+                                      spent: plan.spent_for(item, totals))
+        end
+
+        Domain::Rebalance.moves(spent - limit, slots, to: category.name)
       end
     end
   end

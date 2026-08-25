@@ -4,6 +4,25 @@ require_relative "../../test_helper"
 require_relative "../../support/slice_case"
 
 class ExpenseFlowTest < SliceCase
+  # Estourar o teto não pode virar só um aviso: o bot diz de onde tirar a cota.
+  def test_bursting_a_budget_suggests_moving_quota_from_the_roomiest_category
+    with_regex_parser
+    @factory.seed_user
+
+    reply = send_text("600 mercado")
+
+    assert_includes reply.text, "⚠️ estourou R$ 100,00 do teto de R$ 500,00"
+    assert_includes reply.text, "*Remanejo sugerido para este mês* (R$ 100,00 → Mercado)"
+    assert_includes reply.text, "· *Transporte*: R$ 1.000,00 → R$ 900,00 (gastou R$ 0,00)"
+  end
+
+  def test_a_booking_inside_the_budget_says_nothing_about_rebalancing
+    with_regex_parser
+    @factory.seed_user
+
+    refute_includes send_text("35 mercado").text, "Remanejo"
+  end
+
   # Conta as consultas ao modelo: o ponto é não fazer nenhuma quando o
   # determinístico já resolveu.
   class CountingParser

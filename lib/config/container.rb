@@ -13,8 +13,9 @@ module Config
     # Order matters: setup intercepts while a wizard is open, and expense holds
     # the free-text fallback, so it answers last.
     def router
-      @router ||= Router.new(handlers: [setup_handler, account_handler, savings_handler, reports_handler, help_handler,
-                                        imports_handler, installments_handler, expense_handler])
+      @router ||= Router.new(handlers: [setup_handler, account_handler, savings_handler, budgets_handler,
+                                        reports_handler, export_handler, help_handler, imports_handler,
+                                        installments_handler, expense_handler])
     end
 
     def setup_handler
@@ -32,13 +33,11 @@ module Config
     def expense_handler
       Features::Expense::Handler.new(
         record_expense: Features::Expense::RecordExpense.new(
-          user_repository: users, category_repository: categories,
-          expense_repository: expenses, fixed_cost_repository: fixed_costs,
+          plan_assembler: plan_assembler, expense_repository: expenses,
           parser: @expense_parser || llm_parser, clock: @clock
         ),
         assign_category: Features::Expense::AssignCategory.new(
-          user_repository: users, category_repository: categories, expense_repository: expenses,
-          fixed_cost_repository: fixed_costs
+          plan_assembler: plan_assembler, category_repository: categories, expense_repository: expenses
         ),
         prepare_category_change: Features::Expense::PrepareCategoryChange.new(
           category_repository: categories, expense_repository: expenses
@@ -105,6 +104,26 @@ module Config
       )
     end
 
+    def export_handler
+      Features::Export::Handler.new(
+        export_data: Features::Export::ExportData.new(
+          plan_assembler: plan_assembler, expense_repository: expenses,
+          installment_repository: installment_plans, clock: @clock
+        ),
+        presenter: Features::Export::Presenter.new
+      )
+    end
+
+    def budgets_handler
+      Features::Budgets::Handler.new(
+        view_budgets: Features::Budgets::ViewBudgets.new(plan_assembler: plan_assembler, clock: @clock),
+        set_budget: Features::Budgets::SetBudget.new(
+          plan_assembler: plan_assembler, category_repository: categories, clock: @clock
+        ),
+        presenter: Features::Budgets::Presenter.new
+      )
+    end
+
     def view_projection
       @view_projection ||= Features::Reports::ViewProjection.new(
         plan_assembler: plan_assembler, installment_repository: installment_plans, clock: @clock
@@ -137,7 +156,8 @@ module Config
         history: Features::Reports::ViewHistory.new(expense_repository: expenses, clock: @clock),
         weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: @clock),
         advice: weekly_advice,
-        presenter: Features::Reports::Presenter.new
+        presenter: Features::Reports::Presenter.new,
+        clock: @clock
       )
     end
 
@@ -175,7 +195,7 @@ module Config
     end
 
     def plan_assembler
-      @plan_assembler ||= Features::Reports::PlanAssembler.new(
+      @plan_assembler ||= Shared::PlanAssembler.new(
         user_repository: users, category_repository: categories, fixed_cost_repository: fixed_costs,
         subscription_repository: subscriptions, goal_repository: goals
       )
