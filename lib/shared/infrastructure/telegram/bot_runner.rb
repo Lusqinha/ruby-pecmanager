@@ -57,17 +57,30 @@ module Infrastructure
 
         download(bot, document.file_id)
       rescue StandardError => e
-        # A URL carrega o token: nunca entra no log.
-        @logger.puts("[download] #{e.class}")
+        # A URL carrega o token, então a mensagem sai limpa dele.
+        @logger.puts("[download] #{e.class}: #{safe(e.message)}\n#{safe(e.backtrace&.first.to_s)}")
         nil
       end
 
+      def safe(text) = text.to_s.gsub(@token.to_s, "<token>")
+
       def download(bot, file_id)
-        path = bot.api.get_file(file_id: file_id).file.file_path
-        uri = URI("https://api.telegram.org/file/bot#{@token}/#{path}")
-        response = Net::HTTP.get_response(uri)
+        path = file_path(bot.api.get_file(file_id: file_id))
+        return nil unless path
+
+        response = fetch(URI("https://api.telegram.org/file/bot#{@token}/#{path}"))
         response.is_a?(Net::HTTPSuccess) ? response.body : nil
       end
+
+      # A gem devolve o tipo File; versões antigas devolvem o Hash cru da API.
+      def file_path(answer)
+        return answer.file_path if answer.respond_to?(:file_path)
+
+        answer.is_a?(Hash) ? (answer.dig("result", "file_path") || answer["file_path"]) : nil
+      end
+
+      # Ponto de costura pro teste: o resto do download é montagem de URL.
+      def fetch(uri) = Net::HTTP.get_response(uri)
 
       def handle_callback(bot, query)
         return unless allowed?(query.from.id)
