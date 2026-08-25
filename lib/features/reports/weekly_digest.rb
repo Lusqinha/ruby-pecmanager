@@ -8,7 +8,8 @@ module Features
     class WeeklyDigest
       KIND = :weekly
 
-      def initialize(weekly:, presenter:, delivery_repository:, schedule:)
+      def initialize(weekly:, presenter:, delivery_repository:, schedule:, advice: nil)
+        @advice = advice
         @weekly = weekly
         @presenter = presenter
         @delivery_repository = delivery_repository
@@ -24,7 +25,7 @@ module Features
           next unless report
 
           @delivery_repository.record(user_id, KIND, now.to_date)
-          [user_id, @presenter.weekly(report)]
+          [user_id, @presenter.weekly(report, @advice&.call(report))]
         end
       end
 

@@ -119,6 +119,7 @@ module Features
           spent = month_totals[category.id] || Domain::Money.zero
           WeeklyLine.new(category_name: category.name,
                          week: week_totals[category.id] || Domain::Money.zero,
+                         spent: spent, limit: limit,
                          left: [limit - spent, Domain::Money.zero].max,
                          days_left: days_left)
         end.sort_by { |line| -line.week.cents }

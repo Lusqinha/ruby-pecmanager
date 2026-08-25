@@ -36,6 +36,23 @@ module Infrastructure
         )
       end
 
+      # Parecer é bônus: prazo curto e qualquer falha vira nil, para que o
+      # relatório saia sem ele em vez de atrasar ou quebrar.
+      def advise(prompt, timeout: advice_timeout)
+        response = post(endpoint, advice_payload_for(prompt), timeout: timeout)
+        return nil unless response.is_a?(Net::HTTPSuccess)
+
+        text = extract(JSON.parse(response.body)).to_s.strip
+        text.empty? ? nil : text
+      rescue StandardError => e
+        @logger&.warn("Parecer não veio a tempo, seguindo sem ele: #{e.class}")
+        nil
+      end
+
+      def advice_payload_for(_prompt) = raise(NotImplementedError, "#{self.class}#advice_payload_for")
+
+      def advice_timeout = Integer(ENV.fetch("ADVICE_TIMEOUT", "45"))
+
       def endpoint = raise(NotImplementedError, "#{self.class}#endpoint")
 
       def payload_for(_text, _today, _categories) = raise(NotImplementedError, "#{self.class}#payload_for")
@@ -64,11 +81,11 @@ module Infrastructure
           "category_hint: #{hint}. date: YYYY-MM-DD. Só JSON."
       end
 
-      def post(uri, body)
+      def post(uri, body, timeout: @timeout)
         http = Net::HTTP.new(uri.host, uri.port)
         http.use_ssl = uri.scheme == "https"
         http.open_timeout = 2
-        http.read_timeout = @timeout
+        http.read_timeout = timeout
         http.post(uri.path, JSON.generate(body), headers)
       end
 

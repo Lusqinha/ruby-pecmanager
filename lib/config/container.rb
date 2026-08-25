@@ -117,9 +117,14 @@ module Config
         weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler,
                                                   expense_repository: expenses, clock: @clock),
         presenter: Features::Reports::Presenter.new,
+        advice: weekly_advice,
         delivery_repository: deliveries,
         schedule: Infrastructure::Schedule.new(weekday: Integer(ENV.fetch("DIGEST_WEEKDAY", "5")), hour: Integer(ENV.fetch("DIGEST_HOUR", "16")))
       )
+    end
+
+    def weekly_advice
+      Features::Reports::WeeklyAdvice.new(advisor: @expense_parser || llm_parser)
     end
 
     def reports_handler
@@ -131,6 +136,7 @@ module Config
         projection: view_projection,
         history: Features::Reports::ViewHistory.new(expense_repository: expenses, clock: @clock),
         weekly: Features::Reports::ViewWeekly.new(plan_assembler: plan_assembler, expense_repository: expenses, clock: @clock),
+        advice: weekly_advice,
         presenter: Features::Reports::Presenter.new
       )
     end
